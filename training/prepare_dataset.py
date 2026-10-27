@@ -49,9 +49,14 @@ def main():
     ap.add_argument("--val", type=float, default=0.15)
     ap.add_argument("--test", type=float, default=0.10)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--repeat", action="append", default=[], metavar="DIR=N",
+                    help="a --src whose train images are linked N times, e.g. kendi=4: "
+                         "a few hundred own photos must not drown in RealWaste")
     args = ap.parse_args()
 
+    repeat = {os.path.abspath(k): int(v) for k, v in (r.split("=") for r in args.repeat)}
     files = {b: [] for b in BINS}
+    weight = {}
     for src in args.src:
         for d in sorted(os.listdir(src)):
             path = os.path.join(src, d)
@@ -65,6 +70,8 @@ def main():
                     if f.lower().endswith(EXT)]
             print(f"  {d:28s} -> {b:8s} {len(imgs):5d}")
             files[b] += imgs
+            for f in imgs:
+                weight[f] = repeat.get(os.path.abspath(src), 1)
 
     rnd = random.Random(args.seed)
     if os.path.exists(args.out):
@@ -80,7 +87,9 @@ def main():
             for f in lst:
                 # Hash the source path so equal names from two datasets don't clash.
                 h = hashlib.sha1(f.encode()).hexdigest()[:10]
-                os.symlink(os.path.abspath(f), os.path.join(d, h + os.path.splitext(f)[1].lower()))
+                ext = os.path.splitext(f)[1].lower()
+                for k in range(weight[f] if split == "train" else 1):
+                    os.symlink(os.path.abspath(f), os.path.join(d, f"{h}_{k}{ext}"))
     print("\nkutu      train   val  test")
     for b in BINS:
         c = [len(os.listdir(os.path.join(args.out, s, b))) for s in ("train", "val", "test")]
