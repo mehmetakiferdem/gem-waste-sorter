@@ -27,7 +27,7 @@ def roi_box(frame, roi):
     return int(roi[0] * w), int(roi[1] * h), int(roi[2] * w), int(roi[3] * h)
 
 
-def draw(frame, box, state, label, conf, last, bins, fps, backend):
+def draw(frame, box, state, label, conf, last, bins, fps, backend, probs=None, labels=()):
     x0, y0, x1, y1 = box
     col = tuple(bins[label]["color"]) if label in bins else (200, 200, 200)
     cv2.rectangle(frame, (x0, y0), (x1, y1), col, 2)
@@ -35,6 +35,10 @@ def draw(frame, box, state, label, conf, last, bins, fps, backend):
     if label:
         cv2.putText(frame, f"{label} {conf * 100:.0f}%", (x0 + 8, y0 + 32),
                     cv2.FONT_HERSHEY_SIMPLEX, 1.0, col, 2)
+    if probs is not None:
+        for row, i in enumerate(probs.argsort()[::-1][:3]):
+            cv2.putText(frame, f"{labels[i]:8s}{probs[i] * 100:3.0f}%", (x1 + 10, y0 + 28 + 28 * row),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
     cv2.putText(frame, f"{state}  {fps:4.1f} fps  {backend}", (10, frame.shape[0] - 12),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
     if last:
@@ -82,10 +86,14 @@ def main():
             roi = frame[box[1]:box[3], box[0]:box[2]]
 
             present = presence.update(roi)
-            label, conf = None, 0.0
+            label, conf, probs = None, 0.0, None
             if present:
-                label, conf, _ = clf.classify(roi)
+                label, conf, probs = clf.classify(roi)
             d = decider.update(present, label, conf)
+            if decider.needs_rebase:
+                decider.needs_rebase = False
+                presence.reset()
+                print("[UYARI] sahne boşalmadı, boş sahne yeniden öğreniliyor")
             if d:
                 ledger.record(d.label, d.confidence, d.agreement)
                 if d.label != UNSURE:
@@ -99,7 +107,10 @@ def main():
             fps = 0.9 * fps + 0.1 / max(now - last_t, 1e-3)
             last_t = now
             state = decider.state if presence.ready else "ARKA PLAN"
-            draw(frame, box, state, label, conf, last, bins, fps, clf.backend)
+            draw(frame, box, state, label, conf, last, bins, fps, clf.backend, probs, clf.labels)
+            ledger.live = {"durum": state, "nesne": present,
+                           "olasilik": {} if probs is None else
+                           {l: round(float(p), 3) for l, p in zip(clf.labels, probs)}}
             web.publish(frame)
     finally:
         cam.close()

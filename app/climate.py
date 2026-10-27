@@ -21,6 +21,7 @@ class ClimateLedger:
         self.mass_kg = 0.0
         self.co2_kg = 0.0
         self.recent = []            # newest first, for the dashboard
+        self.live = {}              # last frame: state and class probabilities
         self._lock = threading.Lock()
         if csv_path:
             self._replay()
@@ -56,6 +57,7 @@ class ClimateLedger:
                 "kutle_kg": round(self.mass_kg, 3),
                 "co2_kg": round(self.co2_kg, 3),
                 "son": list(self.recent),
+                "anlik": dict(self.live),
             }
 
     def _add(self, row):

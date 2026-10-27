@@ -44,6 +44,8 @@ decision:
     min_confidence: 0.55      # bundan düşük güvenli kareler oy vermez
     min_agreement: 0.6        # kazanan sınıfın oy oranı; altıysa "emin değil"
     empty_frames: 10          # karar sonrası tepsinin boşalmış sayılması
+    stuck_frames: 90          # karar sonrası sahne bu kadar kare boşalmazsa
+                              # (kamera oynadı, ışık değişti) boş sahne yeniden öğrenilir
 
 # Sınıf -> kutu. angle: ayırma kapağı servosunun açısı (derece, -90..90).
 # co2_kg_per_kg: doğru ayrıştırılan 1 kg atığın, çöpe/depolamaya gitmesine

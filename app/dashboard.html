@@ -43,6 +43,10 @@
       <p class="note">* Tahmin: sınıf başına ortalama kütle × emisyon faktörü (configs/atik.yaml).</p>
     </div>
     <div class="card" style="margin-top:16px">
+      <div class="note" id="durum" style="margin:0 0 6px"></div>
+      <div id="anlik"></div>
+    </div>
+    <div class="card" style="margin-top:16px">
       <table id="son"></table>
     </div>
   </div>
@@ -60,6 +64,10 @@ async function tick() {
     const max = Math.max(1, ...Object.values(s.sayilar));
     document.getElementById("bars").innerHTML = Object.entries(s.sayilar).map(([k, v]) =>
       `<div class="bar"><span>${nm(k)}</span><i style="width:${100 * v / max}%"></i><em>${v}</em></div>`).join("");
+    const a = s.anlik || {}, pr = Object.entries(a.olasilik || {}).sort((x, y) => y[1] - x[1]);
+    document.getElementById("durum").textContent = "Durum: " + (a.durum || "-") + (a.nesne ? " · nesne var" : "");
+    document.getElementById("anlik").innerHTML = pr.map(([k, v]) =>
+      `<div class="bar"><span>${nm(k)}</span><i style="width:${100 * v}%"></i><em>${Math.round(100 * v)}</em></div>`).join("");
     document.getElementById("son").innerHTML = s.son.map(r =>
       `<tr><td>${r.zaman.slice(11)}</td><td>${nm(r.sinif)}</td><td>%${Math.round(r.guven * 100)}</td></tr>`).join("");
   } catch (e) {}

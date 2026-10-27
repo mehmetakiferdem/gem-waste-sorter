@@ -23,14 +23,21 @@ class Decision:
 
 class DecisionMaker:
     def __init__(self, settle_frames=8, window=12, min_confidence=0.55,
-                 min_agreement=0.6, empty_frames=10):
+                 min_agreement=0.6, empty_frames=10, stuck_frames=90):
         self.settle_frames = settle_frames
         self.window = window
         self.min_confidence = min_confidence
         self.min_agreement = min_agreement
         self.empty_frames = empty_frames
+        self.stuck_frames = stuck_frames
+        # Set when the scene never emptied after a decision (camera moved,
+        # light changed, item left in place): the caller should relearn the
+        # empty scene. Cleared by the caller.
+        self.needs_rebase = False
         self.state = EMPTY
+        self._stuck = 0
         self._count = 0
+        self._stuck = 0
         self._votes = []
 
     def update(self, present, label=None, confidence=0.0):
@@ -66,6 +73,10 @@ class DecisionMaker:
         # WAIT: the tray must stay empty for a while before the next item.
         if present:
             self._count = 0
+            self._stuck += 1
+            if self.stuck_frames and self._stuck >= self.stuck_frames:
+                self.needs_rebase = True
+                self._go(EMPTY)
         else:
             self._count += 1
             if self._count >= self.empty_frames:
@@ -85,4 +96,5 @@ class DecisionMaker:
     def _go(self, state):
         self.state = state
         self._count = 0
+        self._stuck = 0
         self._votes = []

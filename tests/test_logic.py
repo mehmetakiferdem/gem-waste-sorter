@@ -68,3 +68,9 @@ def test_dataset_folder_mapping():
              "biological": "organik", "trash": "diger", "plastik": "plastik"}
     for name, want in cases.items():
         assert bin_of(name) == want, name
+
+
+def test_stuck_scene_asks_for_rebase():
+    dm = DecisionMaker(settle_frames=1, window=3, stuck_frames=5)
+    feed(dm, 10, True, "cam", 0.9)          # decides, then the scene never empties
+    assert dm.needs_rebase and dm.state == EMPTY
