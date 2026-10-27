@@ -74,3 +74,15 @@ def test_stuck_scene_asks_for_rebase():
     dm = DecisionMaker(settle_frames=1, window=3, stuck_frames=5)
     feed(dm, 10, True, "cam", 0.9)          # decides, then the scene never empties
     assert dm.needs_rebase and dm.state == EMPTY
+
+
+def test_finder_skips_room_and_edge_boxes():
+    import types
+    from detector import ObjectFinder
+    f = types.SimpleNamespace(max_area=0.7)
+    pick = lambda dets: ObjectFinder.pick(f, dets, 1280, 720)
+    held = ("bottle", 0.6, (500, 200, 700, 600))
+    grille = ("bottle", 0.9, (870, 380, 1280, 720))      # cut off by right and bottom edges
+    assert pick([grille, held]) == held
+    assert pick([("microwave", 0.9, (400, 200, 800, 500))]) is None
+    assert pick([("person", 0.9, (300, 0, 900, 720)), held]) == held

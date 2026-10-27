@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""Waste sorter: camera -> presence -> classifier -> vote -> bin + CO2 ledger."""
+"""Waste sorter: camera -> find item -> classifier -> vote -> bin + CO2 ledger.
+
+mode: elde   a COCO detector finds the item held up to the camera and the
+             classifier sees only that box; any background, camera may move.
+mode: tepsi  fixed camera over a tray; an empty-tray model spots the item and
+             the classifier sees the whole ROI.
+"""
 
 import argparse
 import os
@@ -16,6 +22,7 @@ from camera import Camera                           # noqa: E402
 from classifier import WasteClassifier              # noqa: E402
 from climate import ClimateLedger                   # noqa: E402
 from decision import UNSURE, DecisionMaker          # noqa: E402
+from detector import DEFAULT_MODEL, FOOD, ObjectFinder, crop  # noqa: E402
 from presence import PresenceDetector               # noqa: E402
 from sorter import Sorter                           # noqa: E402
 
@@ -27,18 +34,20 @@ def roi_box(frame, roi):
     return int(roi[0] * w), int(roi[1] * h), int(roi[2] * w), int(roi[3] * h)
 
 
-def draw(frame, box, state, label, conf, last, bins, fps, backend, probs=None, labels=()):
-    x0, y0, x1, y1 = box
+def draw(frame, box, state, label, conf, last, bins, fps, backend, probs=None, labels=(), what=""):
     col = tuple(bins[label]["color"]) if label in bins else (200, 200, 200)
-    cv2.rectangle(frame, (x0, y0), (x1, y1), col, 2)
-    # cv2 fonts have no Turkish letters, so the overlay uses the ASCII keys.
-    if label:
-        cv2.putText(frame, f"{label} {conf * 100:.0f}%", (x0 + 8, y0 + 32),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1.0, col, 2)
+    if box:
+        x0, y0, x1, y1 = box
+        cv2.rectangle(frame, (x0, y0), (x1, y1), col, 2)
+        # cv2 fonts have no Turkish letters, so the overlay uses the ASCII keys.
+        if label:
+            cv2.putText(frame, f"{label} {conf * 100:.0f}% {what}", (x0 + 8, max(28, y0 - 10)),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.9, col, 2)
     if probs is not None:
         for row, i in enumerate(probs.argsort()[::-1][:3]):
-            cv2.putText(frame, f"{labels[i]:8s}{probs[i] * 100:3.0f}%", (x1 + 10, y0 + 28 + 28 * row),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+            cv2.putText(frame, f"{labels[i]:8s}{probs[i] * 100:3.0f}%",
+                        (frame.shape[1] - 230, 100 + 30 * row),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
     cv2.putText(frame, f"{state}  {fps:4.1f} fps  {backend}", (10, frame.shape[0] - 12),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
     if last:
@@ -60,8 +69,18 @@ def main():
     unknown = set(clf.labels) - set(bins)
     if unknown:
         sys.exit(f"labels.txt içindeki {sorted(unknown)} configs 'bins' altında yok")
-    presence = PresenceDetector(**cfg["presence"])
-    decider = DecisionMaker(**cfg["decision"])
+    mode = cfg.get("mode", "tepsi")
+    if mode == "elde":
+        el = cfg.get("elde", {})
+        finder = ObjectFinder(el.get("detector", DEFAULT_MODEL),
+                              el.get("threshold", 0.35), el.get("max_area", 0.7),
+                              cfg["model"]["use_tidl"])
+        food_score = el.get("food_score", 0.5)
+        hold_frames = el.get("hold_frames", 4)
+        decider = DecisionMaker(**{**cfg["decision"], **el.get("decision", {})})
+    else:
+        presence = PresenceDetector(**cfg["presence"])
+        decider = DecisionMaker(**cfg["decision"])
     ledger = ClimateLedger(bins, cfg.get("log_csv"))
     sorter = Sorter(cfg.get("sorter", {}), bins)
     cam = Camera(cfg["camera"])
@@ -72,9 +91,14 @@ def main():
     signal.signal(signal.SIGINT, lambda *a: stop.append(1))
     signal.signal(signal.SIGTERM, lambda *a: stop.append(1))
 
-    print(f"[BASLA] model={clf.backend} sınıflar={clf.labels}. Tepsi BOŞ olmalı, "
-          f"{presence.warmup_frames} kare arka plan öğreniliyor.")
+    if mode == "elde":
+        print(f"[BASLA] mod=elde model={clf.backend} sınıflar={clf.labels}. "
+              "Nesneyi kameraya gösterin, sonra kadrajdan çıkarın.")
+    else:
+        print(f"[BASLA] mod=tepsi model={clf.backend} sınıflar={clf.labels}. Tepsi BOŞ olmalı, "
+              f"{presence.warmup_frames} kare arka plan öğreniliyor.")
     seq, last, last_t, fps = 0, None, time.time(), 0.0
+    held, missed = None, 0
     try:
         while not stop and cam.running:
             seq, frame = cam.read(seq)
@@ -82,15 +106,33 @@ def main():
                 time.sleep(0.003)
                 continue
             frame = frame.copy()
-            box = roi_box(frame, cfg["roi"])
-            roi = frame[box[1]:box[3], box[0]:box[2]]
-
-            present = presence.update(roi)
-            label, conf, probs = None, 0.0, None
-            if present:
-                label, conf, probs = clf.classify(roi)
+            label, conf, probs, what = None, 0.0, None, ""
+            if mode == "elde":
+                h, w = frame.shape[:2]
+                pick = finder.pick(finder.detect(frame), w, h)
+                # The detector drops a frame now and then; keep the last box
+                # for a few frames so one miss doesn't cancel the vote.
+                if pick:
+                    held, missed = pick, 0
+                elif held and missed < hold_frames:
+                    missed += 1
+                else:
+                    held = None
+                present = held is not None
+                box = held[2] if held else None
+                if present:
+                    what = held[0]
+                    label, conf, probs = clf.classify(crop(frame, box))
+                    if what in FOOD and held[1] >= food_score:
+                        label, conf = "organik", max(conf, held[1])
+            else:
+                box = roi_box(frame, cfg["roi"])
+                roi = frame[box[1]:box[3], box[0]:box[2]]
+                present = presence.update(roi)
+                if present:
+                    label, conf, probs = clf.classify(roi)
             d = decider.update(present, label, conf)
-            if decider.needs_rebase:
+            if decider.needs_rebase and mode != "elde":
                 decider.needs_rebase = False
                 presence.reset()
                 print("[UYARI] sahne boşalmadı, boş sahne yeniden öğreniliyor")
@@ -106,9 +148,9 @@ def main():
             now = time.time()
             fps = 0.9 * fps + 0.1 / max(now - last_t, 1e-3)
             last_t = now
-            state = decider.state if presence.ready else "ARKA PLAN"
-            draw(frame, box, state, label, conf, last, bins, fps, clf.backend, probs, clf.labels)
-            ledger.live = {"durum": state, "nesne": present,
+            state = decider.state if mode == "elde" or presence.ready else "ARKA PLAN"
+            draw(frame, box, state, label, conf, last, bins, fps, clf.backend, probs, clf.labels, what)
+            ledger.live = {"durum": state, "nesne": present, "coco": what,
                            "olasilik": {} if probs is None else
                            {l: round(float(p), 3) for l, p in zip(clf.labels, probs)}}
             web.publish(frame)

@@ -11,6 +11,18 @@ panosunda gösterilir.
 Kaynağında doğru ayrıştırma ikisini de azaltır. Proje bu etkiyi sayarak
 görünür kılar.
 
+## Çalışma modları
+
+`configs/atik.yaml` içindeki `mode` ayarı seçer:
+
+| Mod | Ne zaman | Nasıl |
+|---|---|---|
+| **`elde`** (varsayılan) | Tanıtım; nesne kameraya elde gösterilir, arka plan ve kamera serbest | TI'ın COCO dedektörü (SSDLite-MobDet, C7x, ~16 ms) nesneyi bulur. İnsan, mobilya ve kadraj kenarından kesik kutular atlanır. Atık modeli yalnızca nesnenin kutusunu görür. Dedektör yiyecek derse (portakal, muz, elma…) sonuç doğrudan organik olur. |
+| **`tepsi`** | Gerçek kutu; kamera sabit, atık hep aynı tepsiye konur | Boş tepsi öğrenilir, fark büyüyünce ROI sınıflandırılır. Aşağıdaki akış bu moda aittir. |
+
+Elde modunda nesneyi gösterdikten sonra kadrajdan çıkarın. Sistem bir
+sonrakine ancak o zaman geçer.
+
 ## Nasıl çalışır?
 
 ```mermaid
@@ -174,7 +186,7 @@ python3 -m pytest -q tests
 ## Depo yapısı
 
 ```
-app/            main.py (döngü), camera, presence, classifier, decision, climate, sorter, web + dashboard.html
+app/            main.py (döngü), camera, detector (elde), presence (tepsi), classifier, decision, climate, sorter, web + dashboard.html, collect.py (veri toplama)
 configs/        atik.yaml
 training/       prepare_dataset.py, train.py, compile_tidl.py
 systemd/        gem-waste-sorter.service

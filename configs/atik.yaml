@@ -8,6 +8,22 @@
 #  Pano:  http://192.168.7.2:8080/  (USB kablosu)  ya da  http://<wlan0>:8080/
 # ===========================================================================
 
+# elde   nesne kameraya elde gösterilir; COCO dedektörü nesneyi bulur, atık
+#        modeli yalnızca onun kutusunu sınıflandırır. Arka plan önemli değil.
+# tepsi  kamera sabit, atık tepsiye konur; boş tepsi farkıyla algılanır.
+mode: elde
+
+elde:
+    detector: /opt/model_zoo/TFL-OD-2020-ssdLite-mobDet-DSP-coco-320x320
+    threshold: 0.35           # dedektör güven eşiği
+    max_area: 0.7             # kareden büyük kutular (masa, duvar) nesne sayılmaz
+    food_score: 0.5           # dedektör yiyecek (portakal, muz, elma...) derse doğrudan organik
+    hold_frames: 4            # dedektör bir iki kare kaçırırsa kutuyu koru
+    decision:                 # aşağıdaki 'decision' ayarlarının bu moddaki farkları
+        settle_frames: 3
+        window: 10
+        stuck_frames: 0       # elde modunda arka plan yok, yeniden öğrenme gerekmez
+
 camera:
     # imx219        CSI0 konnektöründeki Raspberry Pi Camera v2 (ISP: VPAC)
     # usb:/dev/videoN  USB web kamerası (masaüstünde deneme için)
@@ -27,11 +43,11 @@ model:
     use_tidl: true
     input_size: 224
 
-# Atığın konduğu bölge, karenin oranı olarak [x0, y0, x1, y1]. Sınıflandırıcı
+# (tepsi modu) Atığın konduğu bölge, karenin oranı olarak [x0, y0, x1, y1]. Sınıflandırıcı
 # yalnızca bu kesiti görür; kamerayı tepsiye göre hizalayıp buradan daraltın.
 roi: [0.25, 0.10, 0.75, 0.90]
 
-# Tepside bir şey var mı? Boş tepsinin arka plan modeli ile fark alınır.
+# (tepsi modu) Tepside bir şey var mı? Boş tepsinin arka plan modeli ile fark alınır.
 presence:
     diff_threshold: 22        # piksel farkı (0-255)
     area_fraction: 0.03       # ROI'nin bu kadarı değişmişse "nesne var"
@@ -44,7 +60,7 @@ decision:
     min_confidence: 0.55      # bundan düşük güvenli kareler oy vermez
     min_agreement: 0.6        # kazanan sınıfın oy oranı; altıysa "emin değil"
     empty_frames: 10          # karar sonrası tepsinin boşalmış sayılması
-    stuck_frames: 90          # karar sonrası sahne bu kadar kare boşalmazsa
+    stuck_frames: 90          # (tepsi) karar sonrası sahne bu kadar kare boşalmazsa
                               # (kamera oynadı, ışık değişti) boş sahne yeniden öğrenilir
 
 # Sınıf -> kutu. angle: ayırma kapağı servosunun açısı (derece, -90..90).
