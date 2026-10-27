@@ -66,6 +66,18 @@ Eşleme:
 | metal | Metal |
 | diger | Miscellaneous Trash, Textile Trash |
 
+Ek açık lisanslı kümeler (Hugging Face, giriş gerektirmez):
+
+| Küme | Foto | Lisans | Kullanılan sınıflar |
+|---|---|---|---|
+| [Garbage Classification v2](https://huggingface.co/datasets/omasteam/waste-garbage-management-dataset) | 19.762 | MIT | biological, cardboard, clothes, glass, metal, paper, plastic, shoes, trash |
+| [Recycling dataset](https://huggingface.co/datasets/viola77data/recycling-dataset) | 3.107 | Apache-2.0 | aluminium, cardboard, glass, hard/soft plastics, paper, polystyrene |
+
+Bilerek dışarıda bırakılanlar: pil (tehlikeli atık, ayrı toplanır), kağıt
+havlu (geri dönüşmez), takeaway bardak ve tek kullanımlık tabak (kağıt mı
+plastik mi belli değil). `--cap 1500` tek klasörden en fazla 1500 foto alır,
+böylece kıyafet ve ayakkabı "diğer"i ezmez.
+
 `prepare_dataset.py` klasör adına bakarak eşler. Bu yüzden TrashNet ya da
 Kaggle "Garbage Classification" gibi `<sınıf>/<foto>` yapısındaki başka
 kümeler de `--src` ile eklenebilir. **En büyük kazanç kendi fotoğraflarınızdan

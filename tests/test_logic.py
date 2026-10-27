@@ -65,7 +65,11 @@ def test_dataset_folder_mapping():
     cases = {"Food Organics": "organik", "Vegetation": "organik", "Cardboard": "kagit",
              "Paper": "kagit", "Plastic": "plastik", "Glass": "cam", "brown-glass": "cam",
              "Metal": "metal", "Miscellaneous Trash": "diger", "Textile Trash": "diger",
-             "biological": "organik", "trash": "diger", "plastik": "plastik"}
+             "biological": "organik", "trash": "diger", "plastik": "plastik",
+             "aluminium": "metal", "polystyrene": "plastik", "soft plastics": "plastik",
+             "hard plastic": "plastik", "clothes": "diger", "shoes": "diger",
+             "battery": None, "batteries": None, "paper towel": None,
+             "takeaway cups": None, "disposable plates": None}
     for name, want in cases.items():
         assert bin_of(name) == want, name
 

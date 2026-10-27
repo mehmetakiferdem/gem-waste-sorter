@@ -19,14 +19,19 @@ import shutil
 
 BINS = ["plastik", "organik", "kagit", "cam", "metal", "diger"]
 
+# Left out on purpose: batteries are hazardous waste with their own
+# collection, paper towels are not recyclable paper, and takeaway cups and
+# disposable plates are paper or plastic depending on the item.
+SKIP = ["batter", "towel", "takeaway", "disposable"]
+
 # First keyword found in the lower-cased folder name wins; order matters
 # ("paper" must not catch "cardboard" checks, "glass" before "trash").
 KEYWORDS = [
-    ("plastik", ["plastic", "plastik"]),
+    ("plastik", ["plastic", "plastik", "polystyrene"]),
     ("organik", ["food", "organic", "organik", "vegetation", "biological"]),
     ("kagit", ["cardboard", "paper", "kagit", "karton"]),
     ("cam", ["glass", "cam"]),
-    ("metal", ["metal"]),
+    ("metal", ["metal", "alumin"]),
     ("diger", ["trash", "misc", "textile", "clothes", "shoes", "diger"]),
 ]
 EXT = (".jpg", ".jpeg", ".png", ".bmp", ".webp")
@@ -34,6 +39,8 @@ EXT = (".jpg", ".jpeg", ".png", ".bmp", ".webp")
 
 def bin_of(name):
     n = name.lower()
+    if any(s in n for s in SKIP):
+        return None
     if n in BINS:
         return n
     for key, words in KEYWORDS:
@@ -49,6 +56,8 @@ def main():
     ap.add_argument("--val", type=float, default=0.15)
     ap.add_argument("--test", type=float, default=0.10)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--cap", type=int, default=0,
+                    help="at most this many images from one source folder (0 = all)")
     ap.add_argument("--repeat", action="append", default=[], metavar="DIR=N",
                     help="a --src whose train images are linked N times, e.g. kendi=4: "
                          "a few hundred own photos must not drown in RealWaste")
@@ -66,8 +75,10 @@ def main():
             if b is None:
                 print(f"  atlandı: {path} (sınıf eşlenemedi)")
                 continue
-            imgs = [os.path.join(r, f) for r, _, fs in os.walk(path) for f in fs
-                    if f.lower().endswith(EXT)]
+            imgs = sorted(os.path.join(r, f) for r, _, fs in os.walk(path) for f in fs
+                          if f.lower().endswith(EXT))
+            if args.cap and len(imgs) > args.cap:
+                imgs = random.Random(args.seed).sample(imgs, args.cap)
             print(f"  {d:28s} -> {b:8s} {len(imgs):5d}")
             files[b] += imgs
             for f in imgs:
