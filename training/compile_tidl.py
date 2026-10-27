@@ -4,11 +4,13 @@
 Runs on an x86 PC inside TI's edgeai-tidl-tools environment, whose version
 MUST match the Processor SDK on the board (11_00_xx_xx for SDK 11.00):
 
-    git clone -b 11_00_08_00 https://github.com/TexasInstruments/edgeai-tidl-tools
+    git clone -b 11_00_06_00 https://github.com/TexasInstruments/edgeai-tidl-tools
     cd edgeai-tidl-tools && export SOC=am67a && source ./setup.sh
     export TIDL_TOOLS_PATH=$PWD/tools/AM67A/tidl_tools
     export LD_LIBRARY_PATH=$TIDL_TOOLS_PATH
     python3 compile_tidl.py --model ../models/waste_mnv2 --calib dataset/val
+
+(Önerilen yol: Dockerfile.tidl. Sürüm notu için README.)
 
 Option names follow examples/osrt_python/common_utils.py of that release.
 """

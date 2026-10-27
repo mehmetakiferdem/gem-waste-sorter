@@ -82,16 +82,24 @@ sonrasında doğruluğu kartta yeniden ölçün.
 
 ### C7x için derleme (TIDL)
 
-`edgeai-tidl-tools` sürümü kartın Processor SDK'sı ile **aynı** olmalıdır
-(SDK 11.00 → `11_00_xx_xx`).
+Derleme TI'ın Ubuntu 22.04 / Python 3.10 araçlarıyla bir Docker konteynerinde
+yapılır. Araç sürümü kartın C7x yazılımıyla eşleşmelidir: kart imajı SDK
+11.00 (TIDL 11_00_00_00) olduğu için **`11_00_06_00`** kullanılır.
+`11_00_08_00` ek bir C7x yaması ister ve yamasız kartta
+`TIVX_CMD_NODE_CREATE failed` hatası verir.
 
 ```bash
-git clone -b 11_00_08_00 https://github.com/TexasInstruments/edgeai-tidl-tools
-cd edgeai-tidl-tools && export SOC=am67a && source ./setup.sh
-export TIDL_TOOLS_PATH=$PWD/tools/AM67A/tidl_tools LD_LIBRARY_PATH=$PWD/tools/AM67A/tidl_tools
-cd <bu depo>/training
-python3 compile_tidl.py --model ../models/waste_mnv2 --calib dataset/val
+docker build -t gem-tidl:11_00_06_00 -f training/Dockerfile.tidl training
+docker run --rm --shm-size=4g -v $PWD:/work -w /work/training gem-tidl:11_00_06_00 \
+    python3 compile_tidl.py --model ../models/waste_mnv2 --calib dataset/val
 ```
+
+`--shm-size` şarttır: Docker'ın varsayılan 64 MB'lık `/dev/shm` alanıyla
+derleme SIGBUS ile düşer.
+
+Kartta ölçülen değerler: 102 düğümün tamamı C7x'te çalışır. `classify()`
+**21,6 ms** sürer (yeniden boyutlandırma dahil). 90 test fotoğrafında
+82/90 doğru sonuç verir (8-bit; PC emülasyonu %92,2).
 
 `artifacts/` klasörü yoksa uygulama CPU'da çalışır. Bu yavaştır ama bağlantıları denemek için yeterlidir.
 
@@ -103,6 +111,10 @@ wheel'i Python 3.10 içindir.
 ```bash
 sudo apt update && sudo apt install t3-gem-o1-edgeai python3-yaml
 ```
+
+Not: bu paket OpenCV'yi PyPI'dan **GStreamer desteği olmadan** kurar. Bu
+yüzden kamera, OpenCV ile değil PyGObject (`gi`) üzerinden GStreamer
+`appsink` ile okunur.
 
 `/boot/uEnv.txt` içindeki overlay satırı:
 
