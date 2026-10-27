@@ -1,0 +1,2 @@
+# Kartta: onnxruntime (TIDL'li) ve OpenCV (GStreamer'lı) t3-gem-o1-edgeai ile gelir.
+pyyaml

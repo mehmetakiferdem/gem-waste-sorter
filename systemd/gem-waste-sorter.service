@@ -1,0 +1,18 @@
+# /etc/systemd/system/gem-waste-sorter.service
+[Unit]
+Description=T3 Gemstone O1 atık ayrıştırıcı
+After=systemd-udevd.service systemd-modules-load.service network.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/bin/bash /home/gemstone/gem-waste-sorter/start.sh
+WorkingDirectory=/home/gemstone/gem-waste-sorter
+Restart=always
+RestartSec=5
+# Ctrl+C gibi durdur: SIGTERM'de TIOVX kilitli kalabiliyor.
+KillSignal=SIGINT
+TimeoutStopSec=20
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,72 @@
+# ===========================================================================
+#  ATIK AYRIŞTIRICI -- tek yapılandırma dosyası
+#
+#  Çalıştırma (kartta):
+#    sudo ./start.sh                       (kamera kurulumu + uygulama)
+#    python3 app/main.py configs/atik.yaml (kamera zaten hazırsa)
+#
+#  Pano:  http://192.168.7.2:8080/  (USB kablosu)  ya da  http://<wlan0>:8080/
+# ===========================================================================
+
+camera:
+    # imx219        CSI0 konnektöründeki Raspberry Pi Camera v2 (ISP: VPAC)
+    # usb:/dev/videoN  USB web kamerası (masaüstünde deneme için)
+    # file:yol.mp4  video dosyası (kamera olmadan deneme)
+    source: imx219
+    device: /dev/video-imx219-cam0
+    subdev: /dev/v4l-imx219-subdev0
+    width: 1280
+    height: 720
+    dcc_viss: /opt/imaging/imx219/linear/dcc_viss_1920x1080.bin
+    dcc_2a: /opt/imaging/imx219/linear/dcc_2a_1920x1080.bin
+
+model:
+    # training/ altındaki betiklerin ürettiği klasör kartta buraya kopyalanır:
+    #   model.onnx, labels.txt, artifacts/ (TIDL derlemesi)
+    dir: models/waste_mnv2
+    use_tidl: true
+    input_size: 224
+
+# Atığın konduğu bölge, karenin oranı olarak [x0, y0, x1, y1]. Sınıflandırıcı
+# yalnızca bu kesiti görür; kamerayı tepsiye göre hizalayıp buradan daraltın.
+roi: [0.25, 0.10, 0.75, 0.90]
+
+# Tepside bir şey var mı? Boş tepsinin arka plan modeli ile fark alınır.
+presence:
+    diff_threshold: 22        # piksel farkı (0-255)
+    area_fraction: 0.03       # ROI'nin bu kadarı değişmişse "nesne var"
+    learn_rate: 0.02          # boşken arka plan bu hızla güncellenir
+    warmup_frames: 30         # açılışta tepsi BOŞ olmalı
+
+decision:
+    settle_frames: 8          # nesne konduktan sonra elin çekilmesini bekle
+    window: 12                # bu kadar karenin oylaması
+    min_confidence: 0.55      # bundan düşük güvenli kareler oy vermez
+    min_agreement: 0.6        # kazanan sınıfın oy oranı; altıysa "emin değil"
+    empty_frames: 10          # karar sonrası tepsinin boşalmış sayılması
+
+# Sınıf -> kutu. angle: ayırma kapağı servosunun açısı (derece, -90..90).
+# co2_kg_per_kg: doğru ayrıştırılan 1 kg atığın, çöpe/depolamaya gitmesine
+# göre önlediği tahmini sera gazı (kg CO2e). mass_kg: tek parça için ortalama
+# kütle varsayımı. DEĞERLER YAKLAŞIKTIR -- raporlamadan önce kaynağınıza göre
+# güncelleyin (ör. US EPA WARM, IPCC 2006 Atık Kılavuzu, DEFRA dönüşüm faktörleri).
+bins:
+    plastik: {name: "Plastik",        color: [0, 200, 255], angle: -60, mass_kg: 0.03, co2_kg_per_kg: 1.0}
+    organik: {name: "Organik",        color: [60, 180, 60], angle: -20, mass_kg: 0.15, co2_kg_per_kg: 0.5}
+    kagit:   {name: "Kağıt / Karton", color: [200, 160, 60], angle: 20,  mass_kg: 0.05, co2_kg_per_kg: 0.8}
+    cam:     {name: "Cam",            color: [255, 220, 120], angle: 60, mass_kg: 0.30, co2_kg_per_kg: 0.3}
+    metal:   {name: "Metal",          color: [180, 180, 180], angle: 60, mass_kg: 0.02, co2_kg_per_kg: 4.0}
+    diger:   {name: "Diğer",          color: [90, 90, 90],    angle: 0,  mass_kg: 0.05, co2_kg_per_kg: 0.0}
+
+sorter:
+    # none   servo yok, yalnızca ekranda ve panoda göster
+    # hwpwm  donanım PWM; epwm1 = 23010000.pwm, kanal 0 = GPIO6 (pin 31).
+    #        /boot/uEnv.txt'de k3-am67a-t3-gem-o1-pwm-epwm1-gpio6-gpio13.dtbo şart.
+    backend: none
+    pwm_device: 23010000.pwm
+    pwm_channel: 0
+    home_angle: 0             # bekleme konumu
+    hold_s: 1.5               # kapak bu kadar açık kalır, sonra eve döner
+
+log_csv: data/olaylar.csv
+web_port: 8080

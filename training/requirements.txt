@@ -1,0 +1,5 @@
+# Eğitim bilgisayarı (x86, GPU önerilir). Kart için gerekmez.
+torch>=2.3
+torchvision>=0.18
+onnx>=1.15
+pillow

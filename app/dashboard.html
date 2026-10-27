@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Atık Ayrıştırıcı</title>
+<style>
+  :root { --bg:#f6f7f4; --card:#fff; --ink:#1d2a1f; --mute:#5f6b61; --line:#dfe4dc; --acc:#2b8a3e; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#121714; --card:#1b221d; --ink:#e6ece7; --mute:#9aa79d; --line:#2c362f; --acc:#51cf66; }
+  }
+  * { box-sizing:border-box }
+  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.4 system-ui, sans-serif; padding:16px }
+  h1 { font-size:20px; margin:0 0 12px }
+  .grid { display:grid; grid-template-columns:minmax(0,2fr) minmax(260px,1fr); gap:16px }
+  @media (max-width:800px) { .grid { grid-template-columns:1fr } }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px }
+  img { width:100%; border-radius:6px; display:block; background:#000; aspect-ratio:16/9 }
+  .kpi { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px }
+  .kpi div { flex:1 1 110px }
+  .kpi b { display:block; font-size:26px; color:var(--acc); font-variant-numeric:tabular-nums }
+  .kpi span { color:var(--mute); font-size:13px }
+  .bar { display:grid; grid-template-columns:110px 1fr 40px; align-items:center; gap:8px; margin:6px 0 }
+  .bar i { display:block; height:12px; border-radius:6px; background:var(--acc) }
+  .bar em { font-style:normal; text-align:right; font-variant-numeric:tabular-nums }
+  table { width:100%; border-collapse:collapse; font-size:13px }
+  td { padding:4px 0; border-top:1px solid var(--line) }
+  .note { color:var(--mute); font-size:12px; margin-top:10px }
+</style>
+</head>
+<body>
+<h1>♻ Atık Ayrıştırıcı · T3 Gemstone O1</h1>
+<div class="grid">
+  <div class="card"><img src="/video" alt="Canlı kamera görüntüsü"></div>
+  <div>
+    <div class="card">
+      <div class="kpi">
+        <div><b id="toplam">0</b><span>atık</span></div>
+        <div><b id="kg">0</b><span>kg ayrıştırıldı</span></div>
+        <div><b id="co2">0</b><span>kg CO₂e önlendi*</span></div>
+      </div>
+      <div id="bars"></div>
+      <p class="note">* Tahmin: sınıf başına ortalama kütle × emisyon faktörü (configs/atik.yaml).</p>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <table id="son"></table>
+    </div>
+  </div>
+</div>
+<script>
+const NAMES = {plastik:"Plastik", organik:"Organik", kagit:"Kağıt / Karton", cam:"Cam",
+               metal:"Metal", diger:"Diğer", emin_degil:"Emin değil"};
+const nm = k => NAMES[k] || k;
+async function tick() {
+  try {
+    const s = await (await fetch("/api/stats")).json();
+    document.getElementById("toplam").textContent = s.toplam;
+    document.getElementById("kg").textContent = s.kutle_kg.toFixed(2);
+    document.getElementById("co2").textContent = s.co2_kg.toFixed(2);
+    const max = Math.max(1, ...Object.values(s.sayilar));
+    document.getElementById("bars").innerHTML = Object.entries(s.sayilar).map(([k, v]) =>
+      `<div class="bar"><span>${nm(k)}</span><i style="width:${100 * v / max}%"></i><em>${v}</em></div>`).join("");
+    document.getElementById("son").innerHTML = s.son.map(r =>
+      `<tr><td>${r.zaman.slice(11)}</td><td>${nm(r.sinif)}</td><td>%${Math.round(r.guven * 100)}</td></tr>`).join("");
+  } catch (e) {}
+}
+tick(); setInterval(tick, 1000);
+</script>
+</body>
+</html>
