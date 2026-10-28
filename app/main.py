@@ -104,6 +104,11 @@ def main():
     if shots_dir:
         os.makedirs(shots_dir, exist_ok=True)
     seen = None
+    # Every few hundred ms while an item is in view: raw material for training,
+    # labelled afterwards by item (consecutive shots are the same item).
+    raw_dir, raw_every, raw_last = cfg.get("save_raw"), cfg.get("save_raw_every", 0.5), 0.0
+    if raw_dir:
+        os.makedirs(raw_dir, exist_ok=True)
     try:
         while not stop and cam.running:
             seq, frame = cam.read(seq)
@@ -138,6 +143,11 @@ def main():
                 if present:
                     seen = roi
                     label, conf, probs = clf.classify(roi)
+            if raw_dir and present and seen is not None and seen.size \
+                    and time.time() - raw_last >= raw_every:
+                raw_last = time.time()
+                name = f"{raw_last:.2f}_{label}_{what.replace(' ', '-') or 'roi'}.jpg"
+                cv2.imwrite(os.path.join(raw_dir, name), seen, [cv2.IMWRITE_JPEG_QUALITY, 92])
             d = decider.update(present, label, conf)
             if decider.needs_rebase and mode != "elde":
                 decider.needs_rebase = False

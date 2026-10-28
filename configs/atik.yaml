@@ -93,4 +93,8 @@ log_csv: data/olaylar.csv
 # Her kararda sınıflandırıcının gördüğü kesit buraya yazılır (inceleme ve
 # yeniden eğitim için). "" kapatır.
 save_decisions: data/kararlar
+# Nesne kadrajdayken save_raw_every saniyede bir kesit (eğitim verisi için,
+# sonradan nesne nesne etiketlenir). "" kapatır.
+save_raw: data/ham
+save_raw_every: 0.5
 web_port: 8080
