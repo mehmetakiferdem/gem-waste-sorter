@@ -31,7 +31,7 @@
 <body>
 <h1>♻ Atık Ayrıştırıcı · T3 Gemstone O1</h1>
 <div class="grid">
-  <div class="card"><img src="/video" alt="Canlı kamera görüntüsü"></div>
+  <div class="card"><img id="video" src="/video" alt="Canlı kamera görüntüsü"></div>
   <div>
     <div class="card">
       <div class="kpi">
@@ -55,9 +55,15 @@
 const NAMES = {plastik:"Plastik", organik:"Organik", kagit:"Kağıt / Karton", cam:"Cam",
                metal:"Metal", diger:"Diğer", emin_degil:"Emin değil"};
 const nm = k => NAMES[k] || k;
+// The MJPEG stream does not come back by itself after the app restarts:
+// reopen it once the server answers again.
+let down = false;
+const reopen = () => { document.getElementById("video").src = "/video?" + Date.now(); };
+document.getElementById("video").onerror = () => { down = true; };
 async function tick() {
   try {
     const s = await (await fetch("/api/stats")).json();
+    if (down) { down = false; reopen(); }
     document.getElementById("toplam").textContent = s.toplam;
     document.getElementById("kg").textContent = s.kutle_kg.toFixed(2);
     document.getElementById("co2").textContent = s.co2_kg.toFixed(2);
@@ -70,7 +76,7 @@ async function tick() {
       `<div class="bar"><span>${nm(k)}</span><i style="width:${100 * v}%"></i><em>${Math.round(100 * v)}</em></div>`).join("");
     document.getElementById("son").innerHTML = s.son.map(r =>
       `<tr><td>${r.zaman.slice(11)}</td><td>${nm(r.sinif)}</td><td>%${Math.round(r.guven * 100)}</td></tr>`).join("");
-  } catch (e) {}
+  } catch (e) { down = true; }
 }
 tick(); setInterval(tick, 1000);
 </script>

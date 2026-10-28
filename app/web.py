@@ -38,6 +38,7 @@ class _Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self):
+        self.path = self.path.split("?")[0]
         if self.path == "/":
             with open(HTML, "rb") as f:
                 self._send(f.read(), "text/html; charset=utf-8")
