@@ -20,6 +20,17 @@ from torchvision import datasets, models, transforms
 MEAN, STD = [0.485, 0.456, 0.406], [0.229, 0.224, 0.225]
 
 
+class ChannelGain:
+    """Scales R, G, B independently: a white balance the ISP got wrong."""
+
+    def __init__(self, low=0.75, high=1.3):
+        self.low, self.high = low, high
+
+    def __call__(self, x):
+        g = torch.empty(3, 1, 1).uniform_(self.low, self.high)
+        return (x * g).clamp(0, 1)
+
+
 class Deployed(nn.Module):
     """RGB 0..255 NCHW in, logits out."""
 
@@ -36,12 +47,18 @@ class Deployed(nn.Module):
 def loaders(root, size, batch, workers):
     norm = transforms.Normalize(MEAN, STD)
     train_tf = transforms.Compose([
-        transforms.RandomResizedCrop(size, scale=(0.5, 1.0)),
+        # Tighter crops too: live, the classifier sees the detector's box.
+        transforms.RandomResizedCrop(size, scale=(0.35, 1.0)),
         transforms.RandomHorizontalFlip(), transforms.RandomVerticalFlip(),
         transforms.RandomRotation(20),
-        # The IMX219 + ISP colours differ from the dataset cameras.
-        transforms.ColorJitter(0.3, 0.3, 0.3, 0.05),
-        transforms.ToTensor(), norm])
+        # The IMX219 + ISP colours differ from the dataset cameras: the live
+        # picture came out pink in daylight, and items are held, so blurred.
+        transforms.ColorJitter(0.4, 0.4, 0.4, 0.08),
+        transforms.RandomGrayscale(0.05),
+        transforms.RandomApply([transforms.GaussianBlur(7, (0.1, 2.5))], p=0.3),
+        transforms.ToTensor(),
+        transforms.RandomApply([ChannelGain()], p=0.5),
+        norm])
     eval_tf = transforms.Compose([transforms.Resize((size, size)), transforms.ToTensor(), norm])
     tr = datasets.ImageFolder(os.path.join(root, "train"), train_tf)
     va = datasets.ImageFolder(os.path.join(root, "val"), eval_tf)

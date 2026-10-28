@@ -35,6 +35,9 @@ camera:
     height: 720
     dcc_viss: /opt/imaging/imx219/linear/dcc_viss_1920x1080.bin
     dcc_2a: /opt/imaging/imx219/linear/dcc_2a_1920x1080.bin
+    # grayworld: yazılım beyaz dengesi. Gün ışığında görüntü pembeleşiyordu
+    # (kızılötesi?); ISP'nin AWB'si düzeltmiyor. none: kapalı.
+    white_balance: grayworld
 
 model:
     # training/ altındaki betiklerin ürettiği klasör kartta buraya kopyalanır:
@@ -87,4 +90,7 @@ sorter:
     hold_s: 1.5               # kapak bu kadar açık kalır, sonra eve döner
 
 log_csv: data/olaylar.csv
+# Her kararda sınıflandırıcının gördüğü kesit buraya yazılır (inceleme ve
+# yeniden eğitim için). "" kapatır.
+save_decisions: data/kararlar
 web_port: 8080

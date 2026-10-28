@@ -45,11 +45,51 @@ def pipeline(cfg):
     raise ValueError(f"bilinmeyen kamera kaynağı: {src}")
 
 
+class GrayWorld:
+    """Software white balance: scales R, G, B so their means match.
+
+    The picture came out pink in daylight (white wall magenta), most likely
+    infrared reaching the sensor; the ISP's AWB does not take it out. The
+    classifier leans on colour (brown cardboard, green glass), so it went
+    wrong on such frames. Gains are smoothed over frames so they don't flicker.
+
+    Cheap on purpose (a full-frame resize or LUT costs ~20 ms each on the
+    A53): the gains come from a sparse pixel grid every few frames, and they
+    are applied in the same cv2.transform that turns RGB into BGR.
+    """
+
+    def __init__(self, smooth=0.2, every=5):
+        self.smooth = smooth
+        self.every = every
+        self.gains = np.ones(3, np.float32)     # B, G, R
+        self._n = 0
+
+    def update(self, bgr):
+        self._n += 1
+        if self._n % self.every:
+            return
+        px = bgr[::8, ::8].reshape(-1, 3)
+        # Leave out clipped highlights (lamps) and near-black pixels.
+        lum = px.mean(axis=1)
+        px = px[(lum > 15) & (lum < 235)].astype(np.float32)
+        if len(px) > 500:
+            mean = px.mean(axis=0) + 1e-3
+            target = np.clip(mean.mean() / mean, 0.5, 2.5)
+            # The frame was already corrected with the current gains.
+            self.gains = np.clip(self.gains * (1 + self.smooth * (target - 1)), 0.5, 2.5)
+
+    def matrix(self, rgb_in):
+        """3x3 for cv2.transform: (RGB or BGR) in, white balanced BGR out."""
+        m = np.diag(self.gains)
+        return m[:, ::-1].copy() if rgb_in else m
+
+
 class Camera:
     """Reads in a thread and keeps only the newest frame."""
 
     def __init__(self, cfg):
         Gst.init(None)
+        self.wb = GrayWorld() if cfg.get("white_balance", "grayworld") == "grayworld" else None
         p = pipeline(cfg)
         self.pipe = Gst.parse_launch(p)
         self.sink = self.pipe.get_by_name("sink")
@@ -83,12 +123,17 @@ class Camera:
                 continue
             try:
                 frame = np.frombuffer(info.data, np.uint8, count=w * h * 3).reshape(h, w, 3)
-                if s.get_value("format") == "RGB":
+                rgb = s.get_value("format") == "RGB"
+                if self.wb:
+                    frame = cv2.transform(frame, self.wb.matrix(rgb))
+                elif rgb:
                     frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
                 else:
                     frame = frame.copy()
             finally:
                 buf.unmap(info)
+            if self.wb:
+                self.wb.update(frame)
             with self._lock:
                 self._frame = frame
                 self._seq += 1
@@ -105,4 +150,15 @@ class Camera:
         # appsink that is going to NULL segfaults now and then.
         self.running = False
         self._thread.join(timeout=3)
-        self.pipe.set_state(Gst.State.NULL)
+        # set_state(NULL) on the tiovxisp pipeline sometimes never returns
+        # (py-spy: main thread parked in it for minutes, EOS first did not
+        # help), which kept the camera busy for the next start. Give it a few
+        # seconds in a daemon thread and leave without it if it hangs.
+        self.pipe.send_event(Gst.Event.new_eos())
+        self.pipe.get_bus().timed_pop_filtered(
+            Gst.SECOND, Gst.MessageType.EOS | Gst.MessageType.ERROR)
+        t = Thread(target=self.pipe.set_state, args=(Gst.State.NULL,), daemon=True)
+        t.start()
+        t.join(timeout=5)
+        if t.is_alive():
+            print("[UYARI] GStreamer hattı kapanmadı, beklemeden çıkılıyor")

@@ -99,6 +99,11 @@ def main():
               f"{presence.warmup_frames} kare arka plan öğreniliyor.")
     seq, last, last_t, fps = 0, None, time.time(), 0.0
     held, missed = None, 0
+    # What the classifier saw at each decision, to review and to train on.
+    shots_dir = cfg.get("save_decisions")
+    if shots_dir:
+        os.makedirs(shots_dir, exist_ok=True)
+    seen = None
     try:
         while not stop and cam.running:
             seq, frame = cam.read(seq)
@@ -122,7 +127,8 @@ def main():
                 box = held[2] if held else None
                 if present:
                     what = held[0]
-                    label, conf, probs = clf.classify(crop(frame, box))
+                    seen = crop(frame, box)
+                    label, conf, probs = clf.classify(seen)
                     if what in FOOD and held[1] >= food_score:
                         label, conf = "organik", max(conf, held[1])
             else:
@@ -130,6 +136,7 @@ def main():
                 roi = frame[box[1]:box[3], box[0]:box[2]]
                 present = presence.update(roi)
                 if present:
+                    seen = roi
                     label, conf, probs = clf.classify(roi)
             d = decider.update(present, label, conf)
             if decider.needs_rebase and mode != "elde":
@@ -141,7 +148,11 @@ def main():
                 if d.label != UNSURE:
                     sorter.route(d.label)
                 last = d.label
-                print(f"[KARAR] {d.label} güven={d.confidence:.2f} uyum={d.agreement:.2f}")
+                print(f"[KARAR] {d.label} güven={d.confidence:.2f} uyum={d.agreement:.2f}"
+                      + (f" ({what})" if what else ""))
+                if shots_dir and seen is not None and seen.size:
+                    name = f"{time.strftime('%Y%m%d-%H%M%S')}_{d.label}_{what.replace(' ', '-') or 'roi'}.jpg"
+                    cv2.imwrite(os.path.join(shots_dir, name), seen, [cv2.IMWRITE_JPEG_QUALITY, 92])
             elif decider.state == "BOS":
                 last = None
 
