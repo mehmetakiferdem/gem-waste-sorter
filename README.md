@@ -97,12 +97,16 @@ python3 train.py --data dataset --out ../models/waste_mnv2 --epochs 20
 Çıktı: `models/waste_mnv2/model.onnx` ve `labels.txt`. Ağ girdisi RGB 0–255
 float, NCHW 1×3×224×224. Normalizasyon grafiğin içindedir.
 
-İlk eğitimin sonuçları (RealWaste, 20 epoch, Quadro P4000'de ~7 dk, CPU'da
-ONNX, TIDL derlemesinden önce): ayrı tutulan **test** kümesinde %93,9.
-Sınıflar: cam %97,6 · organik %97,6 · metal %97,5 · kağıt %95,8 · diğer %92,6 ·
-**plastik %84,8**. Plastik çoğunlukla metal ile karışıyor. Gerçek tepsiden
-çekilen plastik fotoğrafları en çok bu sınıfa yarar. 8-bit TIDL nicemlemesi
-sonrasında doğruluğu kartta yeniden ölçün.
+Sonuçlar (MobileNetV2, 20 epoch, Quadro P4000):
+
+| Model | Eğitim verisi | RealWaste dışı test | Plastik | Kartta (C7x, 8-bit, 90 foto) |
+|---|---|---|---|---|
+| v1 `waste_mnv2` | yalnız RealWaste | %52,3 | %21 | 38/90 |
+| **v2 `waste_mnv2_v2`** | RealWaste + Garbage v2 + Recycling | **%93,8** | **%90** | **81/90** |
+
+v1 RealWaste testinde %94 görünüyordu ama başka kaynaktan gelen fotoğraflarda
+çöküyordu (çöp tesisi görüntülerine aşırı uyum). Canlı kamerada plastik
+bardağa "kağıt" demesinin sebebi buydu. Kartta tahmin süresi 18,9 ms.
 
 ### C7x için derleme (TIDL)
 
