@@ -19,6 +19,7 @@ elde:
     max_area: 0.7             # kareden büyük kutular (masa, duvar) nesne sayılmaz
     food_score: 0.5           # dedektör yiyecek (portakal, muz, elma...) derse doğrudan organik
     hold_frames: 4            # dedektör bir iki kare kaçırırsa kutuyu koru
+    fixture_frames: 135       # bu kadar kare (~5 sn) kımıldamayan kutu odanın parçası (lamba, ızgara)
     decision:                 # aşağıdaki 'decision' ayarlarının bu moddaki farkları
         settle_frames: 3
         window: 10

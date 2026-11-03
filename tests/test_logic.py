@@ -83,10 +83,25 @@ def test_stuck_scene_asks_for_rebase():
 def test_finder_skips_room_and_edge_boxes():
     import types
     from detector import ObjectFinder
-    f = types.SimpleNamespace(max_area=0.7)
+    f = types.SimpleNamespace(max_area=0.7, fixture_frames=5, fixtures=[], still=(None, 0))
     pick = lambda dets: ObjectFinder.pick(f, dets, 1280, 720)
     held = ("bottle", 0.6, (500, 200, 700, 600))
     grille = ("bottle", 0.9, (870, 380, 1280, 720))      # cut off by right and bottom edges
     assert pick([grille, held]) == held
     assert pick([("microwave", 0.9, (400, 200, 800, 500))]) is None
     assert pick([("person", 0.9, (300, 0, 900, 720)), held]) == held
+    assert pick([("cat", 0.9, (500, 100, 700, 300))]) is None    # ceiling lamp
+
+
+def test_finder_learns_fixtures():
+    import types
+    from detector import ObjectFinder
+    f = types.SimpleNamespace(max_area=0.7, fixture_frames=5, fixtures=[], still=(None, 0))
+    pick = lambda dets: ObjectFinder.pick(f, dets, 1280, 720)
+    lamp = ("vase", 0.8, (500, 100, 700, 300))
+    assert [pick([lamp]) for _ in range(5)] == [lamp] * 4 + [None]
+    assert pick([lamp]) is None                        # remembered
+    held = ("bottle", 0.6, (480, 300, 720, 650))
+    for dx in range(10):                               # a held item jitters, never fixed
+        moved = (held[0], held[1], (480 + dx * 15, 300, 720 + dx * 15, 650))
+        assert pick([lamp, moved]) == moved

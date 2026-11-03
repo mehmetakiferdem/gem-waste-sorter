@@ -74,7 +74,7 @@ def main():
         el = cfg.get("elde", {})
         finder = ObjectFinder(el.get("detector", DEFAULT_MODEL),
                               el.get("threshold", 0.35), el.get("max_area", 0.7),
-                              cfg["model"]["use_tidl"])
+                              cfg["model"]["use_tidl"], el.get("fixture_frames", 135))
         food_score = el.get("food_score", 0.5)
         hold_frames = el.get("hold_frames", 4)
         decider = DecisionMaker(**{**cfg["decision"], **el.get("decision", {})})

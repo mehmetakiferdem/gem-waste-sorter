@@ -56,6 +56,9 @@ def main():
     ap.add_argument("--val", type=float, default=0.15)
     ap.add_argument("--test", type=float, default=0.10)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--train-only", action="append", default=[], metavar="DIR",
+                    help="a --src that goes into train only: consecutive camera shots of "
+                         "one item are near duplicates and would leak into val/test")
     ap.add_argument("--cap", type=int, default=0,
                     help="at most this many images from one source folder (0 = all)")
     ap.add_argument("--repeat", action="append", default=[], metavar="DIR=N",
@@ -64,8 +67,10 @@ def main():
     args = ap.parse_args()
 
     repeat = {os.path.abspath(k): int(v) for k, v in (r.split("=") for r in args.repeat)}
+    train_only = {os.path.abspath(d) for d in args.train_only}
     files = {b: [] for b in BINS}
     weight = {}
+    pinned = {b: [] for b in BINS}
     for src in args.src:
         for d in sorted(os.listdir(src)):
             path = os.path.join(src, d)
@@ -79,8 +84,8 @@ def main():
                           if f.lower().endswith(EXT))
             if args.cap and len(imgs) > args.cap:
                 imgs = random.Random(args.seed).sample(imgs, args.cap)
-            print(f"  {d:28s} -> {b:8s} {len(imgs):5d}")
-            files[b] += imgs
+            print(f"  {d:28s} -> {b:8s} {len(imgs):5d}" + ("  (yalnız train)" if os.path.abspath(src) in train_only else ""))
+            (pinned if os.path.abspath(src) in train_only else files)[b].extend(imgs)
             for f in imgs:
                 weight[f] = repeat.get(os.path.abspath(src), 1)
 
@@ -91,7 +96,7 @@ def main():
         rnd.shuffle(imgs)
         n_val, n_test = int(len(imgs) * args.val), int(len(imgs) * args.test)
         splits = {"val": imgs[:n_val], "test": imgs[n_val:n_val + n_test],
-                  "train": imgs[n_val + n_test:]}
+                  "train": imgs[n_val + n_test:] + pinned[b]}
         for split, lst in splits.items():
             d = os.path.join(args.out, split, b)
             os.makedirs(d, exist_ok=True)
