@@ -7,3 +7,16 @@ models/*
 !models/.gitkeep
 training/dataset/
 training/runs/
+training/kaynak/
+training/kendi/
+training/kendi_test/
+training/kendi_az/
+training/calib/
+training/kendi2/
+training/kendi2_test/
+training/test_tum/
+training/kendi3/
+training/kendi3_test/
+training/kendi4/
+training/kendi4_test/
+training/test_tum2/
