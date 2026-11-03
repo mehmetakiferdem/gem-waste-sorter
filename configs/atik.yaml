@@ -37,13 +37,21 @@ camera:
     dcc_viss: /opt/imaging/imx219/linear/dcc_viss_1920x1080.bin
     dcc_2a: /opt/imaging/imx219/linear/dcc_2a_1920x1080.bin
     # grayworld: yazılım beyaz dengesi. Gün ışığında görüntü pembeleşiyordu
-    # (kızılötesi?); ISP'nin AWB'si düzeltmiyor. none: kapalı.
+    # (kızılötesi?); ISP'nin AWB'si düzeltmiyor. graypixel: yalnızca renksize
+    # yakın piksellerle dengeler (büyük renkli nesne tüm resmi kaydırmaz).
+    # none: kapalı.
     white_balance: grayworld
+    # NoIR kamerada kızılötesi kırmızı kanala biniyor (yeşil kumaş bordo
+    # görünüyordu). Beyaz dengesinden önce uygulanan RGB->RGB matris; ham
+    # bir karede duvar, ten (ağırlıklı), kot, masa ve yeşil tişörtten uyduruldu. Doğru
+    # renk için asıl çözüm IR-cut süzgeci. Modeller (v10) matrissiz görüntüyle
+    # eğitildi; açarsanız yeni veriyle yeniden eğitin.
+    # color_matrix: [[-0.08, 3.44, -1.72], [-0.95, 1.32, 0.73], [-1.75, 1.31, 1.49]]
 
 model:
     # training/ altındaki betiklerin ürettiği klasör kartta buraya kopyalanır:
     #   model.onnx, labels.txt, artifacts/ (TIDL derlemesi)
-    dir: models/waste_mnv2_v2
+    dir: models/waste_mnv2_v10
     use_tidl: true
     input_size: 224
 

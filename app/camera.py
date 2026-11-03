@@ -58,9 +58,12 @@ class GrayWorld:
     are applied in the same cv2.transform that turns RGB into BGR.
     """
 
-    def __init__(self, smooth=0.2, every=5):
+    def __init__(self, smooth=0.2, every=5, ccm=None, gray_pixels=False):
         self.smooth = smooth
         self.every = every
+        self.gray_pixels = gray_pixels
+        # Optional RGB->RGB colour matrix applied before the gains (NoIR fix).
+        self.ccm = None if ccm is None else np.asarray(ccm, np.float32)
         self.gains = np.ones(3, np.float32)     # B, G, R
         self._n = 0
 
@@ -72,7 +75,13 @@ class GrayWorld:
         # Leave out clipped highlights (lamps) and near-black pixels.
         lum = px.mean(axis=1)
         px = px[(lum > 15) & (lum < 235)].astype(np.float32)
-        if len(px) > 500:
+        if self.gray_pixels and len(px) > 500:
+            # Balance on the near-neutral pixels only: a big coloured object
+            # (green shirt) otherwise pulls the whole picture to its opposite.
+            chroma = (px.max(axis=1) - px.min(axis=1)) / (px.mean(axis=1) + 1e-3)
+            gray = px[chroma < 0.12]
+            px = gray if len(gray) >= 300 else px[np.argsort(chroma)[:max(300, len(px) // 10)]]
+        if len(px) > 250:
             mean = px.mean(axis=0) + 1e-3
             target = np.clip(mean.mean() / mean, 0.5, 2.5)
             # The frame was already corrected with the current gains.
@@ -81,6 +90,8 @@ class GrayWorld:
     def matrix(self, rgb_in):
         """3x3 for cv2.transform: (RGB or BGR) in, white balanced BGR out."""
         m = np.diag(self.gains)
+        if self.ccm is not None:
+            m = m @ self.ccm[::-1, ::-1]       # same matrix in BGR order
         return m[:, ::-1].copy() if rgb_in else m
 
 
@@ -89,7 +100,9 @@ class Camera:
 
     def __init__(self, cfg):
         Gst.init(None)
-        self.wb = GrayWorld() if cfg.get("white_balance", "grayworld") == "grayworld" else None
+        wb = cfg.get("white_balance", "grayworld")
+        self.wb = (GrayWorld(ccm=cfg.get("color_matrix"), gray_pixels=wb == "graypixel")
+                   if wb in ("grayworld", "graypixel") else None)
         p = pipeline(cfg)
         self.pipe = Gst.parse_launch(p)
         self.sink = self.pipe.get_by_name("sink")
