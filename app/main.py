@@ -34,14 +34,14 @@ def roi_box(frame, roi):
     return int(roi[0] * w), int(roi[1] * h), int(roi[2] * w), int(roi[3] * h)
 
 
-def draw(frame, box, state, label, conf, last, bins, fps, backend, probs=None, labels=(), what=""):
+def draw(frame, box, state, label, conf, last, bins, fps, backend, probs=None, labels=()):
     col = tuple(bins[label]["color"]) if label in bins else (200, 200, 200)
     if box:
         x0, y0, x1, y1 = box
         cv2.rectangle(frame, (x0, y0), (x1, y1), col, 2)
         # cv2 fonts have no Turkish letters, so the overlay uses the ASCII keys.
         if label:
-            cv2.putText(frame, f"{label} {conf * 100:.0f}% {what}", (x0 + 8, max(28, y0 - 10)),
+            cv2.putText(frame, f"{label} {conf * 100:.0f}%", (x0 + 8, max(28, y0 - 10)),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.9, col, 2)
     if probs is not None:
         for row, i in enumerate(probs.argsort()[::-1][:3]):
@@ -170,8 +170,8 @@ def main():
             fps = 0.9 * fps + 0.1 / max(now - last_t, 1e-3)
             last_t = now
             state = decider.state if mode == "elde" or presence.ready else "ARKA PLAN"
-            draw(frame, box, state, label, conf, last, bins, fps, clf.backend, probs, clf.labels, what)
-            ledger.live = {"durum": state, "nesne": present, "coco": what,
+            draw(frame, box, state, label, conf, last, bins, fps, clf.backend, probs, clf.labels)
+            ledger.live = {"durum": state, "nesne": present,
                            "olasilik": {} if probs is None else
                            {l: round(float(p), 3) for l, p in zip(clf.labels, probs)}}
             web.publish(frame)

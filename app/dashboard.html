@@ -3,80 +3,310 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Atık Ayrıştırıcı</title>
+<title>Atık Yönetim Sistemi</title>
 <style>
-  :root { --bg:#f6f7f4; --card:#fff; --ink:#1d2a1f; --mute:#5f6b61; --line:#dfe4dc; --acc:#2b8a3e; }
+  :root {
+    --bg:#eef2ef; --card:#ffffff; --card2:#f4f7f5; --ink:#16211b; --mute:#617068; --line:#dde4df;
+    --acc:#1f9d55; --acc-soft:#dff3e7; --bad:#c92a2a;
+    --plastik:#f2b705; --organik:#8b5a2b; --kagit:#1c7ed6; --cam:#2f9e44; --metal:#868e96;
+    --diger:#495057; --emin_degil:#e8590c;
+    --shadow:0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.05);
+  }
   @media (prefers-color-scheme: dark) {
-    :root { --bg:#121714; --card:#1b221d; --ink:#e6ece7; --mute:#9aa79d; --line:#2c362f; --acc:#51cf66; }
+    :root:not([data-theme="light"]) {
+      --bg:#0d1210; --card:#151c18; --card2:#1c2520; --ink:#e6ede8; --mute:#8d9b93; --line:#26312b;
+      --acc:#40c074; --acc-soft:#173322; --diger:#adb5bd; --organik:#c08552; --shadow:none;
+    }
   }
   * { box-sizing:border-box }
-  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.4 system-ui, sans-serif; padding:16px }
-  h1 { font-size:20px; margin:0 0 12px }
-  .grid { display:grid; grid-template-columns:minmax(0,2fr) minmax(260px,1fr); gap:16px }
-  @media (max-width:800px) { .grid { grid-template-columns:1fr } }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px }
-  img { width:100%; border-radius:6px; display:block; background:#000; aspect-ratio:16/9 }
-  .kpi { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px }
-  .kpi div { flex:1 1 110px }
-  .kpi b { display:block; font-size:26px; color:var(--acc); font-variant-numeric:tabular-nums }
-  .kpi span { color:var(--mute); font-size:13px }
-  .bar { display:grid; grid-template-columns:110px 1fr 40px; align-items:center; gap:8px; margin:6px 0 }
-  .bar i { display:block; height:12px; border-radius:6px; background:var(--acc) }
-  .bar em { font-style:normal; text-align:right; font-variant-numeric:tabular-nums }
+  body { margin:0; background:var(--bg); color:var(--ink);
+         font:14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif }
+  .num { font-variant-numeric:tabular-nums }
+
+  header { display:flex; align-items:center; gap:14px; padding:14px 24px; background:var(--card);
+           border-bottom:1px solid var(--line); position:sticky; top:0; z-index:2 }
+  .logo { width:38px; height:38px; border-radius:11px; background:var(--acc); color:#fff;
+          display:grid; place-items:center; flex:none }
+  .logo svg { width:22px; height:22px }
+  header h1 { font-size:17px; margin:0; letter-spacing:-.01em }
+  header small { display:block; color:var(--mute); font-size:12px; font-weight:400 }
+  .pills { margin-left:auto; display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end }
+  .pill { display:inline-flex; align-items:center; gap:6px; padding:5px 11px; border-radius:999px;
+          background:var(--card2); border:1px solid var(--line); font-size:12px; color:var(--mute); white-space:nowrap }
+  .dot { width:8px; height:8px; border-radius:50%; background:var(--mute) }
+  .on .dot { background:var(--acc); box-shadow:0 0 0 3px var(--acc-soft) }
+  .off .dot { background:var(--bad) }
+
+  main { padding:20px 24px 32px; max-width:1500px; margin:0 auto; display:grid; gap:16px }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; box-shadow:var(--shadow); min-width:0 }
+  .card h2 { font-size:12px; font-weight:600; margin:0 0 12px; color:var(--mute); text-transform:uppercase; letter-spacing:.07em;
+             display:flex; align-items:center; gap:8px }
+  .card h2 .r { margin-left:auto; text-transform:none; letter-spacing:0; font-weight:400 }
+
+  .kpis { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:16px }
+  .kpi .v { font-size:30px; font-weight:700; letter-spacing:-.02em; margin-top:2px }
+  .kpi .v small { font-size:14px; font-weight:500; color:var(--mute); margin-left:4px }
+  .kpi .l { color:var(--mute); font-size:13px }
+  .kpi .s { color:var(--mute); font-size:12px; margin-top:6px }
+  .meter { height:6px; border-radius:3px; background:var(--card2); margin-top:10px; overflow:hidden }
+  .meter i { display:block; height:100%; background:var(--acc); border-radius:3px; transition:width .4s }
+
+  .top, .bottom { display:grid; grid-template-columns:minmax(0,1.75fr) minmax(300px,1fr); gap:16px }
+  .cam { position:relative; border-radius:10px; overflow:hidden; background:#000; aspect-ratio:16/9 }
+  .cam img { width:100%; height:100%; object-fit:contain; display:block }
+  .cam .badge { position:absolute; right:12px; bottom:12px; background:rgba(0,0,0,.6); color:#fff;
+                padding:4px 10px; border-radius:999px; font-size:12px; display:flex; gap:6px; align-items:center }
+  .cam .badge .dot { background:#ff4d4f; animation:blink 1.4s infinite }
+  @keyframes blink { 50% { opacity:.3 } }
+  .cam .lost { position:absolute; inset:0; display:none; place-items:center; color:#ccc; background:#000 }
+  .cam.down .lost { display:grid }
+
+  .now { display:flex; flex-direction:column; gap:14px }
+  .decision { display:flex; align-items:center; gap:14px; padding:14px; border-radius:12px; background:var(--card2) }
+  .bin-ico { width:52px; height:52px; border-radius:12px; display:grid; place-items:center; color:#fff; flex:none;
+             background:var(--c, var(--mute)); transition:background .3s }
+  .bin-ico svg { width:28px; height:28px }
+  .decision .t { font-size:22px; font-weight:700; letter-spacing:-.01em }
+  .decision .d { color:var(--mute); font-size:12.5px }
+  .steps { display:flex; gap:6px }
+  .steps span { flex:1; text-align:center; padding:6px 4px; border-radius:8px; font-size:11.5px;
+                background:var(--card2); color:var(--mute); border:1px solid transparent }
+  .steps span.act { background:var(--acc-soft); color:var(--acc); border-color:var(--acc); font-weight:600 }
+  .prob { display:grid; grid-template-columns:110px 1fr 40px; align-items:center; gap:10px; margin:8px 0; font-size:13px }
+  .prob .tr { height:8px; border-radius:4px; background:var(--card2); overflow:hidden }
+  .prob .tr i { display:block; height:100%; border-radius:4px; background:var(--c); transition:width .25s }
+  .prob em { font-style:normal; text-align:right; color:var(--mute) }
+  .empty { color:var(--mute); font-size:13px; padding:8px 0 }
+
+  .bins { display:grid; grid-template-columns:repeat(6, minmax(0,1fr)); gap:12px }
+  .bin { border-radius:12px; border:1px solid var(--line); padding:14px; background:var(--card2); position:relative; overflow:hidden }
+  .bin::before { content:""; position:absolute; left:0; top:0; right:0; height:4px; background:var(--c) }
+  .bin .h { display:flex; align-items:center; gap:10px }
+  .bin .bin-ico { width:34px; height:34px; border-radius:9px }
+  .bin .bin-ico svg { width:19px; height:19px }
+  .bin .n { font-weight:600 }
+  .bin .c { font-size:28px; font-weight:700; margin-top:12px; letter-spacing:-.02em }
+  .bin .p { color:var(--mute); font-size:12px }
+  .bin .meter i { background:var(--c) }
+  .bin.flash { animation:flash 1.2s }
+  @keyframes flash { 30% { box-shadow:0 0 0 4px var(--c) } }
+
   table { width:100%; border-collapse:collapse; font-size:13px }
-  td { padding:4px 0; border-top:1px solid var(--line) }
-  .note { color:var(--mute); font-size:12px; margin-top:10px }
+  th { text-align:left; color:var(--mute); font-weight:500; font-size:12px; padding:0 8px 8px; border-bottom:1px solid var(--line) }
+  td { padding:9px 8px; border-bottom:1px solid var(--line) }
+  tr:last-child td { border-bottom:0 }
+  .tag { display:inline-flex; align-items:center; gap:7px; font-weight:500 }
+  .tag::before { content:""; width:9px; height:9px; border-radius:3px; background:var(--c) }
+  .conf { color:var(--mute) }
+  .feed { max-height:360px; overflow:auto }
+  .donut { display:flex; align-items:center; gap:18px }
+  .donut svg { width:150px; height:150px; flex:none }
+  .legend { display:grid; gap:6px; font-size:13px; flex:1 }
+  .legend div { display:flex; justify-content:space-between; gap:8px }
+  .note { color:var(--mute); font-size:12px; margin:12px 0 0 }
+
+  @media (max-width:1100px) { .bins { grid-template-columns:repeat(3, minmax(0,1fr)) } .kpis { grid-template-columns:repeat(2, minmax(0,1fr)) } }
+  @media (max-width:900px) { .top, .bottom { grid-template-columns:1fr } }
+  @media (max-width:560px) {
+    header { padding:12px 16px } main { padding:16px } .pills .pill:not(#conn) { display:none }
+    .bins { grid-template-columns:repeat(2, minmax(0,1fr)) } .kpi .v { font-size:24px }
+    .donut { flex-direction:column; align-items:stretch } .donut svg { align-self:center }
+    th:nth-child(4), td:nth-child(4) { display:none }
+  }
 </style>
 </head>
 <body>
-<h1>♻ Atık Ayrıştırıcı · T3 Gemstone O1</h1>
-<div class="grid">
-  <div class="card"><img id="video" src="/video" alt="Canlı kamera görüntüsü"></div>
-  <div>
-    <div class="card">
-      <div class="kpi">
-        <div><b id="toplam">0</b><span>atık</span></div>
-        <div><b id="kg">0</b><span>kg ayrıştırıldı</span></div>
-        <div><b id="co2">0</b><span>kg CO₂e önlendi*</span></div>
-      </div>
-      <div id="bars"></div>
-      <p class="note">* Tahmin: sınıf başına ortalama kütle × emisyon faktörü (configs/atik.yaml).</p>
-    </div>
-    <div class="card" style="margin-top:16px">
-      <div class="note" id="durum" style="margin:0 0 6px"></div>
-      <div id="anlik"></div>
-    </div>
-    <div class="card" style="margin-top:16px">
-      <table id="son"></table>
-    </div>
+<header>
+  <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M7 19H4.8a1.8 1.8 0 0 1-1.6-2.7L5 13M11 19h8.2a1.8 1.8 0 0 0 1.6-2.7l-1.2-2.1M14 16l-3 3 3 3M8.3 13.6 7 9l-4.7 1.2M9.3 5.8l1.1-1.9a1.8 1.8 0 0 1 3.2 0l4.1 7.1M13.4 10.4 18 9.2l1.3 4.6"/></svg></div>
+  <h1>Akıllı Atık Yönetim Sistemi<small>Yapay zekâ destekli ayrıştırma istasyonu · T3 Gemstone O1</small></h1>
+  <div class="pills">
+    <span class="pill" id="conn"><span class="dot"></span><span>Bağlanıyor…</span></span>
+    <span class="pill">İstasyon #01</span>
+    <span class="pill num" id="clock">--:--:--</span>
   </div>
-</div>
+</header>
+
+<main>
+  <section class="kpis">
+    <div class="card kpi"><div class="l">Toplam ayrıştırılan</div><div class="v num" id="toplam">0<small>adet</small></div>
+      <div class="s" id="toplam_s">&nbsp;</div></div>
+    <div class="card kpi"><div class="l">Geri kazanım oranı</div><div class="v num" id="oran">0<small>%</small></div>
+      <div class="meter"><i id="oran_m" style="width:0"></i></div></div>
+    <div class="card kpi"><div class="l">Ayrıştırılan kütle</div><div class="v num" id="kg">0<small>kg</small></div>
+      <div class="s">tahmini, sınıf ortalamasıyla</div></div>
+    <div class="card kpi"><div class="l">Önlenen emisyon</div><div class="v num" id="co2">0<small>kg CO₂e</small></div>
+      <div class="s" id="co2_s">&nbsp;</div></div>
+  </section>
+
+  <section class="top">
+    <div class="card">
+      <h2>Canlı görüntü</h2>
+      <div class="cam" id="cam">
+        <img id="video" src="/video" alt="Canlı kamera görüntüsü">
+        <div class="badge"><span class="dot"></span>CANLI</div>
+        <div class="lost">Görüntü bekleniyor…</div>
+      </div>
+    </div>
+    <div class="card now">
+      <h2 style="margin:0">Anlık analiz</h2>
+      <div class="decision">
+        <div class="bin-ico" id="now_ico"></div>
+        <div><div class="t" id="now_t">Nesne bekleniyor</div><div class="d" id="now_d">Atığı kameraya gösterin</div></div>
+      </div>
+      <div class="steps" id="steps">
+        <span data-s="BOS">Bekliyor</span><span data-s="YERLESIYOR">Algılandı</span>
+        <span data-s="OYLAMA">Analiz</span><span data-s="BEKLE">Yönlendirildi</span>
+      </div>
+      <div id="probs"></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Atık kutuları <span class="r" id="last_bin"></span></h2>
+    <div class="bins" id="bins"></div>
+  </section>
+
+  <section class="bottom">
+    <div class="card">
+      <h2>Son işlemler <span class="r" id="feed_n"></span></h2>
+      <div class="feed"><table><thead><tr><th>Saat</th><th>Kutu</th><th>Güven</th><th>Oy uyumu</th><th>CO₂e</th></tr></thead>
+        <tbody id="son"></tbody></table></div>
+    </div>
+    <div class="card">
+      <h2>Atık dağılımı</h2>
+      <div class="donut"><svg viewBox="0 0 42 42" id="donut"></svg><div class="legend" id="legend"></div></div>
+      <p class="note">Kütle ve CO₂e: sınıf başına ortalama kütle × emisyon faktörü (configs/atik.yaml). Tahmini değerlerdir.</p>
+    </div>
+  </section>
+</main>
+
 <script>
-const NAMES = {plastik:"Plastik", organik:"Organik", kagit:"Kağıt / Karton", cam:"Cam",
-               metal:"Metal", diger:"Diğer", emin_degil:"Emin değil"};
-const nm = k => NAMES[k] || k;
+const BINS = {
+  plastik:    {n:"Plastik",        d:"Sarı kutu"},
+  kagit:      {n:"Kağıt / Karton", d:"Mavi kutu"},
+  cam:        {n:"Cam",            d:"Yeşil kutu"},
+  metal:      {n:"Metal",          d:"Gri kutu"},
+  organik:    {n:"Organik",        d:"Kahverengi kutu"},
+  diger:      {n:"Diğer",          d:"Genel atık"},
+  emin_degil: {n:"Emin değil",     d:"Elle kontrol"},
+};
+const ORDER = ["plastik", "kagit", "cam", "metal", "organik", "diger"];
+const ICON = {
+  bin: '<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>',
+  plastik: '<path d="M10 2h4v3l2 3v12a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2V8l2-3z"/><path d="M8 12h8"/>',
+  kagit: '<path d="M6 2h9l4 4v16H6z"/><path d="M14 2v5h5M9 12h7M9 16h7"/>',
+  cam: '<path d="M7 3h10l-1 7a4 4 0 0 1-8 0z"/><path d="M12 14v6M8 21h8"/>',
+  metal: '<rect x="6" y="3" width="12" height="18" rx="2"/><path d="M6 7h12M6 17h12"/>',
+  organik: '<path d="M5 19c0-8 6-14 15-14-1 9-6 15-14 15"/><path d="M5 19l7-7"/>',
+  diger: '<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/><path d="M10 11v6M14 11v6"/>',
+  emin_degil: '<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.7M12 17h.01"/>',
+};
+const svg = k => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICON[k] || ICON.bin}</svg>`;
+const col = k => `var(--${k in BINS ? k : "mute"})`;
+const nm = k => (BINS[k] || {}).n || k;
+const $ = id => document.getElementById(id);
+
+$("bins").innerHTML = ORDER.map(k => `
+  <div class="bin" id="bin_${k}" style="--c:${col(k)}">
+    <div class="h"><div class="bin-ico">${svg(k)}</div><div><div class="n">${nm(k)}</div><div class="p">${BINS[k].d}</div></div></div>
+    <div class="c num" id="bc_${k}">0</div>
+    <div class="p num" id="bp_${k}">%0 pay</div>
+    <div class="meter"><i id="bm_${k}" style="width:0"></i></div>
+  </div>`).join("");
+
+const clock = () => { $("clock").textContent = new Date().toLocaleTimeString("tr-TR"); };
+clock(); setInterval(clock, 1000);
+
 // The MJPEG stream does not come back by itself after the app restarts:
 // reopen it once the server answers again.
-let down = false;
-const reopen = () => { document.getElementById("video").src = "/video?" + Date.now(); };
-document.getElementById("video").onerror = () => { down = true; };
+let down = false, lastKey = null;
+const video = $("video");
+video.onerror = () => { down = true; $("cam").classList.add("down"); };
+video.onload = () => $("cam").classList.remove("down");
+const reopen = () => { video.src = "/video?" + Date.now(); };
+
+function conn(ok) {
+  $("conn").className = "pill " + (ok ? "on" : "off");
+  $("conn").lastElementChild.textContent = ok ? "Çevrim içi" : "Bağlantı yok";
+}
+
+function donut(counts, total) {
+  const keys = [...ORDER, "emin_degil"].filter(k => counts[k]);
+  let off = 25, out = `<circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--card2)" stroke-width="5"/>`;
+  for (const k of keys) {
+    const p = 100 * counts[k] / total;
+    out += `<circle cx="21" cy="21" r="15.9" fill="none" stroke="${col(k)}" stroke-width="5"
+             stroke-dasharray="${p} ${100 - p}" stroke-dashoffset="${off}"/>`;
+    off -= p;
+  }
+  out += `<text x="21" y="22" text-anchor="middle" font-size="7" font-weight="700" fill="var(--ink)">${total}</text>
+          <text x="21" y="27.5" text-anchor="middle" font-size="3" fill="var(--mute)">atık</text>`;
+  $("donut").innerHTML = out;
+  $("legend").innerHTML = keys.map(k => `<div><span class="tag" style="--c:${col(k)}">${nm(k)}</span>
+    <span class="num conf">${counts[k]} · %${Math.round(100 * counts[k] / total)}</span></div>`).join("")
+    || '<div class="empty">Henüz kayıt yok</div>';
+}
+
 async function tick() {
-  try {
-    const s = await (await fetch("/api/stats")).json();
-    if (down) { down = false; reopen(); }
-    document.getElementById("toplam").textContent = s.toplam;
-    document.getElementById("kg").textContent = s.kutle_kg.toFixed(2);
-    document.getElementById("co2").textContent = s.co2_kg.toFixed(2);
-    const max = Math.max(1, ...Object.values(s.sayilar));
-    document.getElementById("bars").innerHTML = Object.entries(s.sayilar).map(([k, v]) =>
-      `<div class="bar"><span>${nm(k)}</span><i style="width:${100 * v / max}%"></i><em>${v}</em></div>`).join("");
-    const a = s.anlik || {}, pr = Object.entries(a.olasilik || {}).sort((x, y) => y[1] - x[1]);
-    document.getElementById("durum").textContent = "Durum: " + (a.durum || "-") + (a.nesne ? " · nesne var" : "");
-    document.getElementById("anlik").innerHTML = pr.map(([k, v]) =>
-      `<div class="bar"><span>${nm(k)}</span><i style="width:${100 * v}%"></i><em>${Math.round(100 * v)}</em></div>`).join("");
-    document.getElementById("son").innerHTML = s.son.map(r =>
-      `<tr><td>${r.zaman.slice(11)}</td><td>${nm(r.sinif)}</td><td>%${Math.round(r.guven * 100)}</td></tr>`).join("");
-  } catch (e) { down = true; }
+  let s;
+  try { s = await (await fetch("/api/stats", {cache: "no-store"})).json(); }
+  catch (e) { conn(false); down = true; return; }
+  conn(true);
+  if (down) { down = false; reopen(); }
+
+  const c = s.sayilar || {}, total = s.toplam || 0;
+  $("toplam").innerHTML = `${total}<small>adet</small>`;
+  $("toplam_s").textContent = c.emin_degil ? `${c.emin_degil} adet elle kontrol bekliyor` : "tümü otomatik ayrıştırıldı";
+  const rate = total ? Math.round(100 * s.geri_kazanilan / total) : 0;
+  $("oran").innerHTML = `${rate}<small>%</small>`;
+  $("oran_m").style.width = rate + "%";
+  $("kg").innerHTML = `${s.kutle_kg.toFixed(2)}<small>kg</small>`;
+  $("co2").innerHTML = `${s.co2_kg.toFixed(2)}<small>kg CO₂e</small>`;
+  // ~0.12 kg CO2e per km for an average petrol car.
+  $("co2_s").textContent = s.co2_kg > 0 ? `≈ ${(s.co2_kg / 0.12).toFixed(0)} km araç yolculuğu` : " ";
+
+  const max = Math.max(1, ...ORDER.map(k => c[k] || 0));
+  for (const k of ORDER) {
+    const v = c[k] || 0;
+    $("bc_" + k).textContent = v;
+    $("bp_" + k).textContent = `%${total ? Math.round(100 * v / total) : 0} pay`;
+    $("bm_" + k).style.width = (100 * v / max) + "%";
+  }
+
+  const son = s.son || [];
+  const key = son.length ? son[0].zaman + son[0].sinif : null;
+  if (key && lastKey !== null && key !== lastKey && $("bin_" + son[0].sinif)) {
+    const el = $("bin_" + son[0].sinif);
+    el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash");
+  }
+  lastKey = key;
+  $("last_bin").textContent = son.length ? `Son: ${nm(son[0].sinif)} · ${son[0].zaman.slice(11)}` : "";
+  $("feed_n").textContent = son.length ? `son ${son.length} kayıt` : "";
+  // Rows read back from the CSV after a restart carry numbers as strings.
+  $("son").innerHTML = son.map(r => ({...r, guven: +r.guven, uyum: +r.uyum, co2_kg: +r.co2_kg})).map(r => `<tr>
+      <td class="num">${r.zaman.slice(11)}</td>
+      <td><span class="tag" style="--c:${col(r.sinif)}">${nm(r.sinif)}</span></td>
+      <td class="num conf">%${Math.round(r.guven * 100)}</td>
+      <td class="num conf">%${Math.round(r.uyum * 100)}</td>
+      <td class="num conf">${r.co2_kg ? r.co2_kg.toFixed(3) + " kg" : "–"}</td></tr>`).join("")
+    || '<tr><td colspan="5" class="empty">Henüz işlem yok</td></tr>';
+  donut(c, total);
+
+  const a = s.anlik || {};
+  const pr = Object.entries(a.olasilik || {}).sort((x, y) => y[1] - x[1]);
+  for (const el of $("steps").children) el.classList.toggle("act", el.dataset.s === a.durum);
+  const seen = a.nesne && pr.length;
+  const k = seen ? pr[0][0] : "bin";
+  $("now_ico").style.setProperty("--c", seen ? col(k) : "var(--mute)");
+  $("now_ico").innerHTML = svg(k);
+  $("now_t").textContent = seen ? nm(k) : "Nesne bekleniyor";
+  $("now_d").textContent = seen ? `%${Math.round(100 * pr[0][1])} olasılık · ${(BINS[k] || {}).d || ""}`
+                                : "Atığı kameraya gösterin";
+  $("probs").innerHTML = seen ? pr.map(([k, v]) => `
+    <div class="prob"><span>${nm(k)}</span><div class="tr"><i style="--c:${col(k)};width:${100 * v}%"></i></div>
+    <em class="num">%${Math.round(100 * v)}</em></div>`).join("")
+    : '<div class="empty">Kadrajda nesne yok.</div>';
 }
 tick(); setInterval(tick, 1000);
 </script>
