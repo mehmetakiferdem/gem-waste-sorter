@@ -34,25 +34,32 @@ def roi_box(frame, roi):
     return int(roi[0] * w), int(roi[1] * h), int(roi[2] * w), int(roi[3] * h)
 
 
+ASCII = str.maketrans("çğıöşüÇĞİÖŞÜ", "cgiosuCGIOSU")
+
+
+def shown(label, bins):
+    """Bin name for the overlay; cv2 fonts have no Turkish letters."""
+    return bins[label]["name"].replace(" / ", "/").translate(ASCII) if label in bins else label
+
+
 def draw(frame, box, state, label, conf, last, bins, fps, backend, probs=None, labels=()):
     col = tuple(bins[label]["color"]) if label in bins else (200, 200, 200)
     if box:
         x0, y0, x1, y1 = box
         cv2.rectangle(frame, (x0, y0), (x1, y1), col, 2)
-        # cv2 fonts have no Turkish letters, so the overlay uses the ASCII keys.
         if label:
-            cv2.putText(frame, f"{label} {conf * 100:.0f}%", (x0 + 8, max(28, y0 - 10)),
+            cv2.putText(frame, f"{shown(label, bins)} {conf * 100:.0f}%", (x0 + 8, max(28, y0 - 10)),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.9, col, 2)
     if probs is not None:
         for row, i in enumerate(probs.argsort()[::-1][:3]):
-            cv2.putText(frame, f"{labels[i]:8s}{probs[i] * 100:3.0f}%",
-                        (frame.shape[1] - 230, 100 + 30 * row),
+            cv2.putText(frame, f"{shown(labels[i], bins):13s}{probs[i] * 100:3.0f}%",
+                        (frame.shape[1] - 300, 100 + 30 * row),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
     cv2.putText(frame, f"{state}  {fps:4.1f} fps  {backend}", (10, frame.shape[0] - 12),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
     if last:
-        cv2.rectangle(frame, (10, 10), (330, 60), (0, 0, 0), -1)
-        cv2.putText(frame, f"KARAR: {last}", (20, 45), cv2.FONT_HERSHEY_SIMPLEX, 0.9,
+        cv2.rectangle(frame, (10, 10), (420, 60), (0, 0, 0), -1)
+        cv2.putText(frame, f"KARAR: {shown(last, bins)}", (20, 45), cv2.FONT_HERSHEY_SIMPLEX, 0.9,
                     tuple(bins[last]["color"]) if last in bins else (0, 0, 255), 2)
 
 

@@ -194,7 +194,7 @@ main { padding: 12px 16px 80px; display: grid; gap: 10px; }
   <button class="primary" id="export">Etiketleri indir</button>
 </header>
 <p class="help">Her kart, kameranın art arda kaydettiği kareler, yani büyük olasılıkla tek bir nesne.
-Kısayollar: <b>1</b> plastik · <b>2</b> organik · <b>3</b> kağıt · <b>4</b> cam · <b>5</b> metal · <b>6</b> diğer ·
+Kısayollar: <b>1</b> plastik · <b>2</b> organik · <b>3</b> kağıt/karton · <b>4</b> cam · <b>5</b> metal · <b>6</b> diğer ·
 <b>0</b> atla (boş, el, bulanık) · <b>↑/↓</b> önceki/sonraki. Grupta farklı bir nesne varsa o karelere tıklayıp
 seçin, sonra numaraya basın: yalnızca seçili kareler etiketlenir (<b>Esc</b> seçimi bırakır). Etiketler bu tarayıcıda otomatik saklanır.
 "model" uygulamanın o anki tahmini, "coco" dedektörün verdiği isim; ikisi de ipucu, doğru olmak zorunda değil.</p>

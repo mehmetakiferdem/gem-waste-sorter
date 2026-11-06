@@ -51,7 +51,7 @@ camera:
 model:
     # training/ altındaki betiklerin ürettiği klasör kartta buraya kopyalanır:
     #   model.onnx, labels.txt, artifacts/ (TIDL derlemesi)
-    dir: models/waste_mnv2_v10
+    dir: models/waste_mnv2_v11
     use_tidl: true
     input_size: 224
 
