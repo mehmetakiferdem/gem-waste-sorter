@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1140" height="430" viewBox="0 0 1140 430" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="ok" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#4b5563"/>
+    </marker>
+    <style>
+      .t { font-size: 14px; font-weight: 600; fill: #111827; }
+      .s { font-size: 12px; fill: #4b5563; }
+      .lane { font-size: 13px; font-weight: 700; }
+      .a { stroke: #4b5563; stroke-width: 2; fill: none; marker-end: url(#ok); }
+    </style>
+  </defs>
+  <rect width="1140" height="430" rx="12" fill="#ffffff"/>
+
+  <!-- İşlemci şeritleri -->
+  <rect x="12" y="40" width="1116" height="100" rx="10" fill="#eef6ff"/>
+  <rect x="12" y="150" width="1116" height="100" rx="10" fill="#f3efff"/>
+  <rect x="12" y="260" width="1116" height="100" rx="10" fill="#effaf3"/>
+  <text x="26" y="84" class="lane" fill="#1d4ed8">VPAC</text>
+  <text x="26" y="102" class="s">ISP donanımı</text>
+  <text x="26" y="194" class="lane" fill="#6d28d9">C7x + MMA</text>
+  <text x="26" y="212" class="s">TIDL, 8 bit</text>
+  <text x="26" y="304" class="lane" fill="#047857">A53</text>
+  <text x="26" y="322" class="s">Linux, Python</text>
+  <text x="570" y="26" text-anchor="middle" font-size="16" font-weight="700" fill="#111827">Elde modu: kare başına akış</text>
+
+  <!-- VPAC -->
+  <rect x="170" y="60" width="140" height="60" rx="8" fill="#fff" stroke="#93c5fd" stroke-width="1.5"/>
+  <text x="240" y="85" text-anchor="middle" class="t">IMX219 kamera</text>
+  <text x="240" y="103" text-anchor="middle" class="s">1920×1080 Bayer</text>
+  <rect x="330" y="60" width="140" height="60" rx="8" fill="#fff" stroke="#93c5fd" stroke-width="1.5"/>
+  <text x="400" y="85" text-anchor="middle" class="t">ISP (VISS)</text>
+  <text x="400" y="103" text-anchor="middle" class="s">demozaik, AE / AWB</text>
+  <rect x="490" y="60" width="140" height="60" rx="8" fill="#fff" stroke="#93c5fd" stroke-width="1.5"/>
+  <text x="560" y="85" text-anchor="middle" class="t">Ölçekleme + renk</text>
+  <text x="560" y="103" text-anchor="middle" class="s">1280×720 RGB</text>
+
+  <!-- C7x -->
+  <rect x="650" y="170" width="140" height="60" rx="8" fill="#fff" stroke="#c4b5fd" stroke-width="1.5"/>
+  <text x="720" y="195" text-anchor="middle" class="t">Nesne dedektörü</text>
+  <text x="720" y="213" text-anchor="middle" class="s">SSDLite-MobDet, COCO</text>
+  <rect x="810" y="170" width="140" height="60" rx="8" fill="#fff" stroke="#c4b5fd" stroke-width="1.5"/>
+  <text x="880" y="195" text-anchor="middle" class="t">Atık sınıflandırıcı</text>
+  <text x="880" y="213" text-anchor="middle" class="s">MobileNetV2, 6 sınıf</text>
+
+  <!-- A53 -->
+  <rect x="490" y="280" width="140" height="60" rx="8" fill="#fff" stroke="#86efac" stroke-width="1.5"/>
+  <text x="560" y="305" text-anchor="middle" class="t">Beyaz denge</text>
+  <text x="560" y="323" text-anchor="middle" class="s">gray world, RGB→BGR</text>
+  <rect x="650" y="280" width="140" height="60" rx="8" fill="#fff" stroke="#86efac" stroke-width="1.5"/>
+  <text x="720" y="305" text-anchor="middle" class="t">Kırpma</text>
+  <text x="720" y="323" text-anchor="middle" class="s">insan, mobilya elenir</text>
+  <rect x="810" y="280" width="140" height="60" rx="8" fill="#fff" stroke="#86efac" stroke-width="1.5"/>
+  <text x="880" y="305" text-anchor="middle" class="t">Oylama</text>
+  <text x="880" y="323" text-anchor="middle" class="s">çok kareli karar</text>
+  <rect x="970" y="270" width="148" height="80" rx="8" fill="#fff" stroke="#86efac" stroke-width="1.5"/>
+  <text x="1044" y="293" text-anchor="middle" class="t">Çıktılar</text>
+  <text x="1044" y="311" text-anchor="middle" class="s">servo kapak</text>
+  <text x="1044" y="326" text-anchor="middle" class="s">olaylar.csv, CO₂e</text>
+  <text x="1044" y="341" text-anchor="middle" class="s">pano :8080</text>
+
+  <!-- Oklar -->
+  <path class="a" d="M310,90 H328"/>
+  <path class="a" d="M470,90 H488"/>
+  <path class="a" d="M560,120 V278"/>
+  <path class="a" d="M630,300 L655,232"/>
+  <path class="a" d="M720,230 V278"/>
+  <path class="a" d="M790,300 L815,232"/>
+  <path class="a" d="M880,230 V278"/>
+  <path class="a" d="M950,310 H968"/>
+
+  <!-- Karar durumları -->
+  <text x="570" y="392" text-anchor="middle" font-size="13" fill="#374151">
+    <tspan font-weight="700">Karar durumları:</tspan> BOŞ → YERLEŞİYOR → OYLAMA → BEKLE (kadraj boşalana kadar yeni karar yok)
+  </text>
+  <text x="570" y="414" text-anchor="middle" font-size="12" fill="#6b7280">
+    Dedektör yiyecek (muz, elma, portakal…) bulursa sonuç doğrudan organik olur. Tepsi modunda dedektörün yerini arka plan farkı alır.
+  </text>
+</svg>

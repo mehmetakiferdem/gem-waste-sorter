@@ -25,25 +25,22 @@ sonrakine ancak o zaman geçer.
 
 ## Nasıl çalışır?
 
-```mermaid
-flowchart LR
-    CAM["IMX219<br/>1920×1080 Bayer"] --> ISP["tiovxisp + multiscaler<br/><i>VPAC</i>"]
-    ISP -->|1280×720 BGR| ROI["Tepsi bölgesi (ROI)"]
-    ROI --> PRES["Nesne var mı?<br/><i>arka plan farkı, A53</i>"]
-    PRES -->|var| CLS["MobileNetV2<br/><b>TIDL / C7x</b>"]
-    CLS --> VOTE["12 kare oylama"]
-    VOTE --> SERVO["Servo kapak<br/><i>EPWM1</i>"]
-    VOTE --> LOG["olaylar.csv<br/>CO₂e tahmini"]
-    LOG --> WEB["Pano :8080"]
-```
+![Kare başına akış: VPAC, C7x ve A53 üzerinde hangi adımın çalıştığı](docs/img/mimari.svg)
 
-1. **Varlık algılama.** Sınıflandırıcıda "boş" sınıfı yok. Bu yüzden tepsi
-   boşken arka plan öğrenilir ve fark büyüyünce "nesne var" denir.
-2. **Yerleşme.** Atık konduktan sonra birkaç kare beklenir, el kadrajdan çıksın.
-3. **Oylama.** 12 karenin çoğunluğu alınır. Güven ya da uyum düşükse karar
-   `emin_degil` olur, kutuya yönlendirilmez.
-4. **Kayıt.** `data/olaylar.csv` dosyasına zaman, sınıf, güven, tahmini kütle ve CO₂e yazılır.
-   Uygulama yeniden başlayınca toplamlar buradan okunur.
+Görüntü A53'e ulaşmadan önce ISP donanımında (VPAC) işlenir. İki sinir ağı
+da C7x üzerinde TIDL ile 8 bit çalışır. A53 yalnızca beyaz dengeyi, kırpmayı
+ve karar mantığını yürütür.
+
+1. **Nesneyi bulma.** Elde modunda COCO dedektörü kadrajdaki nesneyi bulur,
+   insan ve mobilya gibi kutuları eler. Tepsi modunda boş tepsi öğrenilir ve
+   fark büyüyünce "nesne var" denir. Sınıflandırıcıda "boş" sınıfı yoktur.
+2. **Yerleşme.** Nesne görününce birkaç kare beklenir, görüntü otursun.
+3. **Oylama.** Birden çok karenin çoğunluğu alınır. Güven ya da uyum düşükse
+   karar `emin_degil` olur, kutuya yönlendirilmez.
+4. **Bekleme.** Karar verildikten sonra kadraj boşalana kadar yeni karar
+   verilmez. Aynı nesne iki kez sayılmaz.
+5. **Kayıt.** `data/olaylar.csv` dosyasına zaman, sınıf, güven, tahmini kütle
+   ve CO₂e yazılır. Uygulama yeniden başlayınca toplamlar buradan okunur.
 
 ## Veri ve model
 
@@ -311,6 +308,8 @@ dosyalarından okunur ve TI'ın DCC Tuning Tool'u olmadan değiştirilemez.
 ## Pano
 
 `http://<kart>:8080/` adresi bir atık yönetim istasyonu panosu açar:
+
+![Pano: toplamlar, canlı görüntü, anlık analiz ve atık kutuları](docs/img/pano.png)
 
 - **Göstergeler:** toplam atık, geri kazanım oranı (`emin_degil` ve `diger`
   hariç), tahmini kütle ve önlenen CO₂e.
